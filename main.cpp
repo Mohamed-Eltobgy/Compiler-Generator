@@ -75,7 +75,6 @@ int main() {
 
     parseInputFile("input.txt", definitions, regexRules, keywords, punctuation);
 
-    // Debug output
     std::cout << "Definitions:\n";
     for (const auto& [key, value] : definitions) {
         std::cout << key << " = " << value << std::endl;

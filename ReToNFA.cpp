@@ -3,29 +3,28 @@
 #include <set>
 #include <string>
 #include <iostream>
-#include<stack>
-#include<sstream>
+#include <stack>
+#include <sstream>
 
-// State structure
+int stateID = 0;
 struct State {
-    int id;                               // State ID
-    std::unordered_map<std::string, std::set<int>> transitions; // Transitions
+    int id;
+    std::unordered_map<std::string, std::set<int>> transitions;
 };
 
-// NFA structure
 struct NFA {
-    int startState;                       // Start state
-    int finalState;                       // Final state
+    int startState;
+    int finalState;
     std::unordered_map<int, State> states; // All states
 };
 
-NFA createCharNFA(std::string c) {
+NFA createInitialNFA(std::string c) {
     NFA nfa;
-    int start = 0, end = 1;
+    int start = stateID, end = stateID + 1;
+    stateID += 2;
     nfa.startState = start;
     nfa.finalState = end;
 
-    // Add states and transition
     nfa.states[start] = State{start};
     nfa.states[end] = State{end};
     nfa.states[start].transitions[c].insert(end);
@@ -33,14 +32,12 @@ NFA createCharNFA(std::string c) {
     return nfa;
 }
 
-NFA concatenate(NFA a, NFA b) {
-    // Connect final state of 'a' to start state of 'b' with an ε-transition
-    a.states[a.finalState].transitions["\0"].insert(b.startState);
-
+NFA concatenateNFA(NFA a, NFA b) {
     // Merge states
-    int mxId = a.states[a.finalState].id;
+    a.states[a.finalState] = b.states[b.startState];
+    b.states.erase(b.startState);
     for (const auto& [id, state] : b.states) {
-        a.states[id + mxId] = state;
+        a.states[id] = state;
     }
 
     a.finalState = b.finalState;
@@ -49,16 +46,16 @@ NFA concatenate(NFA a, NFA b) {
 
 NFA unionNFA(NFA a, NFA b) {
     NFA nfa;
-    int newStart = a.states.size() + b.states.size() + 3;
-    int newFinal = newStart + 1;
-
-    // New start state with ε-transitions to a and b
+    int newStart = stateID;
+    int newFinal = stateID + 1;
+    stateID += 2;
+    // connect New start state with ε-transitions to old start states
     nfa.startState = newStart;
     nfa.states[newStart] = State{newStart};
     nfa.states[newStart].transitions["\0"].insert(a.startState);
     nfa.states[newStart].transitions["\0"].insert(b.startState);
 
-    // New final state with ε-transitions from a and b's final states
+    // connect new final state with ε-transitions to old final states
     nfa.finalState = newFinal;
     nfa.states[newFinal] = State{newFinal};
     a.states[a.finalState].transitions["\0"].insert(newFinal);
@@ -68,10 +65,9 @@ NFA unionNFA(NFA a, NFA b) {
     for (const auto& [id, state] : a.states) {
         nfa.states[id] = state;
     }
-    int mxId = a.states[a.finalState].id;
     
     for (const auto& [id, state] : b.states) {
-        nfa.states[id + mxId] = state;
+        nfa.states[id] = state;
     }
 
     return nfa;
@@ -79,10 +75,10 @@ NFA unionNFA(NFA a, NFA b) {
 
 NFA kleeneStar(NFA a, bool isPositve) {
     NFA nfa;
-    int newStart = a.states.size();
-    int newFinal = newStart + 1;
-
-    // New start and final state
+    int newStart = stateID;
+    int newFinal = stateID + 1;
+    stateID += 2;
+    // New start and final states
     nfa.startState = newStart;
     nfa.finalState = newFinal;
     nfa.states[newStart] = State{newStart};
@@ -128,44 +124,131 @@ std::vector<std::string> splitTokens(const std::string& input) {
             token = "";
         }
     }
-
+    if (token.length() > 0)
+        tokens.push_back(token);
     return tokens;
 }
 
-NFA buildNFAFromRegex(const std::vector<std::string> tokens) {
-    
-    
-
- 
-   
+int combineNFAs(std::stack<NFA>& nfaS, std::string token, std::string nextToken, bool isUnion, int bracketNum) {
+    NFA nfa = createInitialNFA(token);
+    bool flag = false;
+    if (nextToken == "+") {
+        NFA newNfa = kleeneStar(nfa, true);
+        flag = true;
+        nfa = newNfa;
+    } else if (nextToken == "*") {
+        NFA newNfa = kleeneStar(nfa, false);
+        flag = true;
+        nfa = newNfa;
+    }
+    if (isUnion && nfaS.size() > bracketNum) {
+        isUnion = false;
+        if (!nfaS.empty()) {
+            NFA newNfa = unionNFA(nfaS.top(), nfa);
+            nfaS.pop();
+            nfaS.push(newNfa);
+        }
+    } else if (!nfaS.empty() && nfaS.size() > bracketNum) {
+        NFA newNfa = concatenateNFA(nfaS.top(), nfa);
+        nfaS.pop();
+        nfaS.push(newNfa);
+    } else {
+        nfaS.push(nfa);
+    }
+    if (flag)
+        return 1;
+    return 0;
 }
-   
 
+NFA buildNFAFromRegex(const std::vector<std::string> tokens) {
+    std::stack<NFA> nfaS;
+    std::stack<int> opHist;
+    bool isUnion = false;
+    for (int i = 0; i < tokens.size(); i++) {
+        if (tokens[i] != "(" && tokens[i] != ")" && tokens[i] != "|" && tokens[i] != "+" && tokens[i] != "*" &&
+            tokens[i] != "L" && tokens[i] != "\\") {
+            std::string  nextToken = (i + 1 < tokens.size()) ? tokens[i + 1] : "";
+            i += combineNFAs(nfaS, tokens[i], nextToken, isUnion, opHist.size());
+        } else if (i > 0 && tokens[i-1] == "\\") {
+            if (tokens[i] == "L") {
+                combineNFAs(nfaS, "\0", "", isUnion, opHist.size());
+            } else {
+                std::string  nextToken = (i + 1 < tokens.size()) ? tokens[i + 1] : "";
+                i += combineNFAs(nfaS, tokens[i], nextToken, isUnion, opHist.size());
+            }
+        } else {
+            if (tokens[i] == "|") {
+                isUnion = true;
+            } else if (tokens[i] == "+" && !nfaS.empty()) {
+                NFA newNfa = kleeneStar(nfaS.top(), true);
+                nfaS.pop();
+                nfaS.push(newNfa);
+            } else if (tokens[i] == "*" && !nfaS.empty()) {
+                NFA newNfa = kleeneStar(nfaS.top(), false);
+                nfaS.pop();
+                nfaS.push(newNfa);
+            } else if (tokens[i] == "L") {
+                std::string  nextToken = (i + 1 < tokens.size()) ? tokens[i + 1] : "";
+                i += combineNFAs(nfaS, tokens[i], nextToken, isUnion, opHist.size());
+            } else if (tokens[i] == "(") {
+                if (!nfaS.empty()) {
+                    opHist.push(isUnion);
+                }
+                isUnion = false;
+            } else if (tokens[i] == ")") {
+                if (i + 1 < tokens.size()) {
+                    if (tokens[i + 1] == "+") {
+                        NFA newNfa = kleeneStar(nfaS.top(), true);
+                        nfaS.pop();
+                        nfaS.push(newNfa);
+                        i++;
+                    } else if (tokens[i + 1] == "*") {
+                        NFA newNfa = kleeneStar(nfaS.top(), false);
+                        nfaS.pop();
+                        nfaS.push(newNfa);
+                        i++;
+                    }
+                }
+                if (!opHist.empty()) {
+                    NFA topNfa = nfaS.top();
+                    nfaS.pop();
+                    if (opHist.top()) {
+                        NFA newNfa = unionNFA(nfaS.top(), topNfa);
+                        nfaS.pop();
+                        nfaS.push(newNfa);
+                    } else {
+                        NFA newNfa = concatenateNFA(nfaS.top(), topNfa);
+                        nfaS.pop();
+                        nfaS.push(newNfa);
+                    }
+                    opHist.pop();
+                }
+            }
+        }
+    }
+    return nfaS.top();
+}
 
 int main() {
-   
-    std::vector<std::string> tokens = splitTokens("letter (letter|digit)* ");
+    stateID = 0;
+    std::vector<std::string> tokens = splitTokens("letter | (letter digit)");
   
-    // for(auto& token : ans)
-    //     std::cout <<token << "\n";
+    for(auto& token : tokens)
+        std::cout <<token << "\n";
 
-    // // Example: Regular expression for "a|b*"
-    // std::string regexPostfix = "ab*|";
+    NFA nfa = buildNFAFromRegex(tokens);
 
-    // // Build NFA
-    // NFA nfa = buildNFAFromRegex(regexPostfix);
-
-    // // Print NFA states and transitions
-    // for (const auto& [id, state] : nfa.states) {
-    //     std::cout << "State " << id << ":\n";
-    //     for (const auto& [symbol, targets] : state.transitions) {
-    //         std::cout << "  " << (symbol == "\0" ? "ε" : std::string(1, symbol)) << " -> { ";
-    //         for (int target : targets) {
-    //             std::cout << target << " ";
-    //         }
-    //         std::cout << "}\n";
-    //     }
-    // }
+    // Print NFA states and transitions
+    for (const auto& [id, state] : nfa.states) {
+        std::cout << "State " << id << ":\n";
+        for (const auto& [symbol, targets] : state.transitions) {
+            std::cout << "  " << (symbol == "\0" ? "ε" : symbol) << " -> { ";
+            for (int target : targets) {
+                std::cout << target << " ";
+            }
+            std::cout << "}\n";
+        }
+    }
 
     return 0;
 }
