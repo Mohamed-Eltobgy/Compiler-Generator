@@ -320,12 +320,6 @@ public:
         }
         std::cout << "----------------------------------------\n" << std::endl;
     }
-
-    ReToNFA() {
-        buildCombinedNFA();
-        NFAToDFA(combinedNFA);
-        print();
-    }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     struct DFAState {
         int id;
@@ -448,9 +442,13 @@ public:
     }
     return dfa;
 }
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unordered_map<std::string, int> symbolTable;
+ReadInput r;
+std::vector<std::string> tokenNamePriority;
 // Lexical Analyzer:Finds the longest prefix matching a regular expression
 std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa, const std::string& input) {
     size_t position=0;
@@ -483,11 +481,17 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
             if (std::find(dfa.acceptedFinalStates.begin(), dfa.acceptedFinalStates.end(), currentState)!=dfa.acceptedFinalStates.end()) {
                 matchFound=true;
                 lastMatchPos=i;
-                // Get the highest-priority token name from the state assuming the first tokenname
-                if (!dfa.states.at(currentState).tokenNames.empty()) {
-                    lastMatchedToken = *dfa.states.at(currentState).tokenNames.begin();
+                // Get the highest-priority token name if there are many token names
+               if (!dfa.states.at(currentState).tokenNames.empty()) 
+               {
+                    const auto& tokenNames = dfa.states.at(currentState).tokenNames;
+                    for (const std::string& priorityToken : tokenNamePriority) {
+                        if (tokenNames.find(priorityToken) != tokenNames.end()) {
+                            lastMatchedToken = priorityToken;
+                            break; 
+                        }
+                    }
                 }
-
             }
         }
 
@@ -506,20 +510,29 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
         } 
         else 
         {
-      
            // errorRecovery(input,position);
            // RECOVERY FUNCTION
-         
         }
     }
     return tokens;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
+ReToNFA() {
+        buildCombinedNFA();
+        std::string input = "457584";
+        tokenNamePriority = r.GetPriorities();
+        std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(NFAToDFA(combinedNFA), input);
 
+        std::cout << "Tokens:\n";
+        for (const auto& token : tokens) {
+            std::cout << "Token: " << token.first << ", Value: " << token.second << "\n";
+        }
 
+        std::cout << "\nSymbol Table:\n";
+        for (const auto& entry : symbolTable) {
+            std::cout << "Symbol: " << entry.first << ", ID: " << entry.second << "\n";
+        }
+
+            // print();
+        }
 };
-
-// int main() {
-//     ReToNFA();
-//     return 0;
-// }
