@@ -8,13 +8,14 @@ int main() {
     nfa.startState=0;
     nfa.finalState=2;
 
-    nfa.states[0] = {0, {{"a", {1}},{"a", {2}}}};
-    nfa.states[1] = {1, {{"b", {2}},{"a", {0}}}};
-    nfa.states[2] = {2}; 
+     
+    nfa.states[0] = {0, {{"a", {1,2}}},"0"};
+    nfa.states[1] = {1, {{"b", {2}},{"a", {0}}},"1"};
+    nfa.states[2] = {2,{},"2"}; 
 
     nfa.acceptedFinalStates = {2};
 
-    ReToNFA::NFA dfa = reToNFA.NFAToDFA(nfa);
+    ReToNFA::DFA dfa = reToNFA.NFAToDFA(nfa);
 
     std::cout << "DFA States and Transitions:\n";
     for (const auto& [id, state] : dfa.states) {
@@ -26,6 +27,11 @@ int main() {
             }
             std::cout << "}\n";
         }
+        std::cout << "Token names: { ";
+        for (const auto& token : state.tokenNames) {
+            std::cout << token << " ";
+        }
+        std::cout << "}\n";
     }
 
     std::cout << "DFA Final States: { ";

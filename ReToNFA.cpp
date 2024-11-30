@@ -277,14 +277,29 @@ public:
 
     ReToNFA() {
         buildCombinedNFA();
+        NFAToDFA(combinedNFA);
         print();
     }
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct DFAState {
+        int id;
+        std::unordered_map<std::string, std::set<int>> transitions;
+        std::set<std::string> tokenNames;
+    };
 
-    //////////////////////////////////////////////////////////////////////////////////////
-    NFA NFAToDFA(NFA nfa) 
+    struct DFA {
+        int startState;
+        int finalState;
+        std::unordered_map<int,DFAState> states; // All states
+        std::vector<int> acceptedFinalStates;
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    DFA NFAToDFA(NFA nfa) 
     {
 
-    NFA dfa;
+    DFA dfa;
     std::map<std::set<int>,int> stateMapping; //map NFA state sets to DFA states
     std::queue<std::set<int>> stateQueue; //Queue for the unprocessed NFA state sets
     int dfaStateID=0; //ids of the DFA states 
@@ -341,6 +356,14 @@ public:
         int currentDFAState=stateMapping[currentSet];
         dfa.states[currentDFAState]={currentDFAState};
 
+        //token names from the NFA states in the current set
+        for (int state : currentSet) {
+            if (!nfa.states[state].tokenName.empty()) {
+                dfa.states[currentDFAState].tokenNames.insert(nfa.states[state].tokenName);
+            }
+        }
+
+      
         // all possible transitions
         std::map<std::string, std::set<int>> symbolTransitions;
         for (int state : currentSet) 
@@ -379,6 +402,75 @@ public:
     }
     return dfa;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+std::unordered_map<std::string, int> symbolTable;
+// Lexical Analyzer:Finds the longest prefix matching a regular expression
+std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa, const std::string& input) {
+    size_t position=0;
+    std::vector<std::pair<std::string, std::string>> tokens; //matched tokens and their values
+
+    while (position<input.size()) 
+    {
+        int currentState=dfa.startState;
+        size_t lastMatchPos=position;
+        std::string lastMatchedToken;
+        bool matchFound=false;
+
+        //input character by character
+        for (size_t i=position; i<input.size();++i) 
+        {
+            std::string currentChar(1, input[i]);
+
+            // Check if there's a valid transition from the current state
+            auto stateIt=dfa.states.find(currentState);
+            if (stateIt==dfa.states.end()) break; // Invalid state
+
+            const auto& transitions=stateIt->second.transitions;
+            auto transitionIt=transitions.find(currentChar);
+            if (transitionIt==transitions.end()) break; // No transition for this character
+
+            // Move to the next state
+            currentState=*transitionIt->second.begin();
+
+            // Check if this state is an accepted final state
+            if (std::find(dfa.acceptedFinalStates.begin(), dfa.acceptedFinalStates.end(), currentState)!=dfa.acceptedFinalStates.end()) {
+                matchFound=true;
+                lastMatchPos=i;
+                // Get the highest-priority token name from the state assuming the first tokenname
+                if (!dfa.states.at(currentState).tokenNames.empty()) {
+                    lastMatchedToken = *dfa.states.at(currentState).tokenNames.begin();
+                }
+
+            }
+        }
+
+        if (matchFound) 
+        {
+            //get the matched substring and add it to the symbol table
+            std::string matchedSubstring=input.substr(position, lastMatchPos - position + 1);
+            position=lastMatchPos+1;
+
+            // Insert the token and its value into the symbol table if not already present
+            if (symbolTable.find(matchedSubstring) == symbolTable.end()) {
+                symbolTable[matchedSubstring] = symbolTable.size() + 1;
+            }
+
+            tokens.emplace_back(lastMatchedToken,matchedSubstring);
+        } 
+        else 
+        {
+      
+           // errorRecovery(input,position);
+           // RECOVERY FUNCTION
+         
+        }
+    }
+    return tokens;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 };
 
 // int main() {
