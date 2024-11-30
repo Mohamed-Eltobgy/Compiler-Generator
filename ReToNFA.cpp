@@ -1,10 +1,9 @@
+#include <iostream>
 #include <unordered_map>
 #include <vector>
 #include <set>
 #include <string>
-#include <iostream>
 #include <stack>
-#include <sstream>
 #include "ReadInput.cpp"
 
 class ReToNFA {
@@ -272,7 +271,7 @@ public:
                 std::cout << "}\n";
             }
         }
-        std::cout << "----------------------------------------" << std::endl;
+        std::cout << "----------------------------------------\n" << std::endl;
     }
 
     ReToNFA() {
@@ -280,3 +279,8 @@ public:
         print();
     }
 };
+
+int main() {
+    ReToNFA();
+    return 0;
+}
