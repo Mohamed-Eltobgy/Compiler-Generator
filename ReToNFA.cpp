@@ -5,6 +5,7 @@
 #include <string>
 #include <stack>
 #include "ReadInput.cpp"
+#include <queue>
 
 class ReToNFA {
 public:
@@ -278,9 +279,109 @@ public:
         buildCombinedNFA();
         print();
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    NFA NFAToDFA(NFA nfa) 
+    {
+
+    NFA dfa;
+    std::map<std::set<int>,int> stateMapping; //map NFA state sets to DFA states
+    std::queue<std::set<int>> stateQueue; //Queue for the unprocessed NFA state sets
+    int dfaStateID=0; //ids of the DFA states 
+    
+    //epsilon closure function of a set of NFA states
+    auto epsilonClosure=[&](const std::set<int>& states) 
+    {
+        std::stack<int> stack;
+        std::set<int> closure(states);
+
+        for (int state : states)
+            stack.push(state);
+
+        while (!stack.empty()) {
+            int current=stack.top();
+            stack.pop();
+            if (nfa.states[current].transitions.count("\0")) {
+                for (int next : nfa.states[current].transitions["\0"]) {
+                    if (closure.insert(next).second) { //first:iterator pointing to the inserted element second:true or false insertion was successful or not.
+                        stack.push(next);
+                    }
+                }
+            }
+        }
+        return closure;
+    };
+
+    //Function to compute the set of states reachable with a given symbol
+    auto move=[&](const std::set<int>& states, const std::string& symbol) {
+        std::set<int> result;
+        for (int state : states) {
+            if (nfa.states[state].transitions.count(symbol)) {
+                for (int next : nfa.states[state].transitions[symbol]) {
+                    result.insert(next);
+                }
+            }
+        }
+        return result;
+    };
+
+    //epsilon closure of the start state
+    std::set<int> startClosure=epsilonClosure({nfa.startState});
+    stateMapping[startClosure]=dfaStateID++;
+    stateQueue.push(startClosure);
+
+    dfa.startState=0;
+
+    // Subset construction
+    while (!stateQueue.empty()) 
+    {
+        std::set<int> currentSet=stateQueue.front();
+        stateQueue.pop();
+
+        int currentDFAState=stateMapping[currentSet];
+        dfa.states[currentDFAState]={currentDFAState};
+
+        // all possible transitions
+        std::map<std::string, std::set<int>> symbolTransitions;
+        for (int state : currentSet) 
+        {
+            for (const auto& [symbol, targets] : nfa.states[state].transitions) 
+            {
+                if (symbol=="\0") continue;
+                symbolTransitions[symbol].insert(targets.begin(),targets.end());
+            }
+        }
+
+        for (const auto& [symbol,targetStates] : symbolTransitions) 
+        {
+            std::set<int> newSet=epsilonClosure(targetStates);
+            if (newSet.empty()) continue;
+            if (!stateMapping.count(newSet)) 
+            {
+                stateMapping[newSet]=dfaStateID++;
+                stateQueue.push(newSet);
+            }
+            dfa.states[currentDFAState].transitions[symbol].insert(stateMapping[newSet]);
+        }
+    }
+
+    // final states
+    for (const auto& [stateSet, dfaState] : stateMapping) 
+    {
+        for (int nfaFinal : nfa.acceptedFinalStates) 
+        {
+            if(stateSet.count(nfaFinal))
+            {
+                dfa.acceptedFinalStates.push_back(dfaState);
+                break;
+            }
+        }
+    }
+    return dfa;
+}
 };
 
-int main() {
-    ReToNFA();
-    return 0;
-}
+// int main() {
+//     ReToNFA();
+//     return 0;
+// }
