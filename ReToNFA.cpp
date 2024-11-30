@@ -491,6 +491,9 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
                             break; 
                         }
                     }
+                    // if (!dfa.states.at(currentState).tokenNames.empty()) {
+                    // lastMatchedToken = *dfa.states.at(currentState).tokenNames.begin();
+                // }
                 }
             }
         }
@@ -517,12 +520,50 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
     return tokens;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
+void write_output_to_file(const std::string filename,std::vector<std::pair<std::string, std::string>> tokens)
+{
+    std::ofstream file_output (filename,std::ios::app);
+    if (!file_output)
+    {
+        std::cerr << "Error while opening the file !!!!!!!!";
+    }
+    for (const auto& token : tokens) {
+        file_output << token.first << std::endl;
+    }
+    file_output.close();
+    if (file_output.good()) {
+        std::cout << "Data written successfully to " << filename << std::endl;
+    } else {
+        std::cerr << "Error while writing to the file." << std::endl;
+    }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+std::string read_from_input_file(const std::string filename) {
+    std::ifstream file_input(filename);
+    if (!file_input.is_open()) {
+        std::cerr << "Error: Could not open input file.\n";
+        return "";
+    }
+
+    std::string result;
+    char ch;
+    while (file_input.get(ch)) 
+    {
+        if (!isspace(ch)) {
+            result += ch;
+        }
+    }
+    file_input.close();
+    return result;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 ReToNFA() {
         buildCombinedNFA();
-        std::string input = "457584";
+        std::string input = read_from_input_file("in.txt");
+        std :: cout << input ;
         tokenNamePriority = r.GetPriorities();
         std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(NFAToDFA(combinedNFA), input);
-
+        write_output_to_file("output.txt",tokens);
         std::cout << "Tokens:\n";
         for (const auto& token : tokens) {
             std::cout << "Token: " << token.first << ", Value: " << token.second << "\n";
