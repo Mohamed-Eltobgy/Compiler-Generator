@@ -31,21 +31,31 @@ public:
             if (line[0] == '{' && line.back() == '}') {
                 // Parse keywords
                 std::string words = line.substr(1, line.size() - 2);
-                std::regex wordRegex("\\s+");
-                std::sregex_token_iterator iter(words.begin(), words.end(), wordRegex, -1);
-                std::sregex_token_iterator end;
-                for (; iter != end; ++iter) {
-                    keywords.insert(iter->str());
+                std::string key = "";
+                for (int i = 0; i < words.length(); i++) {
+                    if (words[i] != ' ') {
+                        key += words[i];
+                    } else if (key.length() != 0){
+                        keywords.insert(key);
+                        key = "";
+                    }
                 }
+                if (key.length() > 0)
+                    keywords.insert(key);
             } else if (line[0] == '[' && line.back() == ']') {
                 // Parse punctuation symbols
-                std::string symbols = line.substr(1, line.size() - 2);
-                std::regex symbolRegex("\\s+");
-                std::sregex_token_iterator iter(symbols.begin(), symbols.end(), symbolRegex, -1);
-                std::sregex_token_iterator end;
-                for (; iter != end; ++iter) {
-                    punctuation.insert(iter->str());
+                std::string words = line.substr(1, line.size() - 2);
+                std::string punc = "";
+                for (int i = 0; i < words.length(); i++) {
+                    if (words[i] != ' ') {
+                        punc += words[i];
+                    } else if (punc.length() != 0){
+                        punctuation.insert(punc);
+                        punc = "";
+                    }
                 }
+                if (punc.length() > 0)
+                    punctuation.insert(punc);
             } else {
                 for (int i = 0; i < line.length(); i++) {
                     if (line[i] == ':') {
@@ -174,6 +184,54 @@ public:
             substitute[key] = value;
         }
 
+        for (auto& [key, value] : defs) {
+            for (int i = 0; i < value.length(); i++) {
+                if (i > 0 && value[i] == '|' && value[i - 1] != '\\') {
+                    value.insert(i + 1, 1, '(');
+                    int count = 0;
+                    int j;
+                    for (j = i + 2; j < value.length(); j++) {
+                        if (value[j] == '(') {
+                            count++;
+                        } else if (value[j] == ')') {
+                            count--;
+                            if (count < 0) {
+                                value.insert(j + 1, 1, ')');
+                                break;
+                            }
+                        }
+                    }
+                    if (j == value.length()) {
+                        value += ')';
+                    }
+                }
+            }
+        }
+
+        for (auto& [key, value] : regexRules) {
+            for (int i = 0; i < value.length(); i++) {
+                if (i > 0 && value[i] == '|' && value[i - 1] != '\\') {
+                    value.insert(i + 1, 1, '(');
+                    int count = 0;
+                    int j;
+                    for (j = i + 2; j < value.length(); j++) {
+                        if (value[j] == '(') {
+                            count++;
+                        } else if (value[j] == ')') {
+                            count--;
+                            if (count < 0) {
+                                value.insert(j + 1, 1, ')');
+                                break;
+                            }
+                        }
+                    }
+                    if (j == value.length()) {
+                        value += ')';
+                    }
+                }
+            }
+        }
+        
         for (auto& [key, value] : regexRules) {
             handleRanges(value);
             std::vector<std::string> temp = splitTokens(value);

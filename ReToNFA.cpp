@@ -170,13 +170,14 @@ public:
     NFA buildNFAFromRegex(const std::vector<std::string> tokens) {
         std::stack<NFA> nfaS;
         std::stack<int> opHist;
+        int isEscape = -2;
         bool isUnion = false;
         for (int i = 0; i < tokens.size(); i++) {
             if (tokens[i] != "(" && tokens[i] != ")" && tokens[i] != "|" && tokens[i] != "+" && tokens[i] != "*" &&
                 tokens[i] != "L" && tokens[i] != "\\") {
                 std::string  nextToken = (i + 1 < tokens.size()) ? tokens[i + 1] : "";
                 i += combineNFAs(nfaS, tokens[i], nextToken, isUnion, opHist.size());
-            } else if (i > 0 && tokens[i-1] == "\\") {
+            } else if (isEscape == i - 1) {
                 if (tokens[i] == "L") {
                     combineNFAs(nfaS, "\0", "", isUnion, opHist.size());
                 } else {
@@ -230,8 +231,12 @@ public:
                         }
                         opHist.pop();
                     }
+                } else if (tokens[i] == "\\") {
+                    isEscape = i;
                 }
             }
+            if (i == isEscape + 1)
+                isEscape = -2;
         }
         return nfaS.top();
     }
@@ -241,15 +246,56 @@ public:
         ReadInput parsedInput;
         combinedNFA = NFA{0};
         combinedNFA.states[0] = State{0};
+
         for (int i = 0; i < parsedInput.regexRules.size(); i++) {
             std::vector<std::string> tokens = splitTokens(parsedInput.regexRules[i].second);
         
+        
+            // for(auto& token : tokens)
+            //     std::cout <<token << "\n";
+            
+
             // for(auto& token : tokens)
             //     std::cout <<token << "\n";
             
             // build NFA for a single expression
             NFA nfa = buildNFAFromRegex(tokens);
             nfa.states[nfa.finalState].tokenName = parsedInput.regexRules[i].first;
+
+            // add the new NFA to the combined NFA
+            combinedNFA.states[0].transitions["\0"].insert(nfa.startState);
+            combinedNFA.acceptedFinalStates.push_back(nfa.finalState);
+
+            for (const auto& [id, state] : nfa.states) {
+                combinedNFA.states[id] = state;
+            }
+        }
+
+        for (const auto& key : parsedInput.keywords) {
+            std::vector<std::string> charsOfKey;
+            for (char c : key) {
+                charsOfKey.push_back(std::string(1, c));
+            }
+            NFA nfa = buildNFAFromRegex(charsOfKey);
+            nfa.states[nfa.finalState].tokenName = key;
+
+            // add the new NFA to the combined NFA
+            combinedNFA.states[0].transitions["\0"].insert(nfa.startState);
+            combinedNFA.acceptedFinalStates.push_back(nfa.finalState);
+
+            for (const auto& [id, state] : nfa.states) {
+                combinedNFA.states[id] = state;
+            }
+        }
+
+        for (const auto& punc : parsedInput.punctuation) {
+            std::vector<std::string> charsOfKey;
+            for (char c : punc) {
+                charsOfKey.push_back(std::string(1, c));
+            }
+            NFA nfa = buildNFAFromRegex(charsOfKey);
+            nfa.states[nfa.finalState].tokenName = punc;
+
             // add the new NFA to the combined NFA
             combinedNFA.states[0].transitions["\0"].insert(nfa.startState);
             combinedNFA.acceptedFinalStates.push_back(nfa.finalState);
