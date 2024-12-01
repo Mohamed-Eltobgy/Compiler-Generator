@@ -2,10 +2,22 @@
 #include <unordered_map>
 #include <vector>
 #include <set>
+#include <map>
 #include <string>
 #include <stack>
 #include "ReadInput.cpp"
 #include <queue>
+
+struct MapHash {
+    std::size_t operator()(const std::map<std::string, int>& m) const {
+        std::size_t seed = 0;
+        for (const auto& [key, value] : m) {
+            seed ^= std::hash<std::string>{}(key) ^ (std::hash<int>{}(value) << 1);
+        }
+        return seed;
+    }
+};
+
 
 class ReToNFA {
 public:
@@ -448,6 +460,99 @@ public:
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+DFA minimizeDFA(const DFA& dfa) {
+    // Step 1: Partition into final and non-final states
+    std::set<int> finalStates(dfa.acceptedFinalStates.begin(), dfa.acceptedFinalStates.end());
+    std::set<int> nonFinalStates;
+
+    for (const auto& [id, state] : dfa.states) {
+        if (!finalStates.count(id)) {
+            nonFinalStates.insert(id);
+        }
+    }
+
+    // Initial partition
+    std::vector<std::set<int>> partitions = {finalStates, nonFinalStates};
+
+    // Step 2: Refine partitions
+    bool isRefined = true;
+    while (isRefined) {
+        isRefined = false;
+        std::vector<std::set<int>> newPartitions;
+
+        for (const auto& partition : partitions) {
+            std::unordered_map<std::map<std::string, int>, std::set<int>, MapHash> transitionGroups;
+
+            // Group states based on their transitions
+            for (int state : partition) {
+                std::map<std::string, int> transitionMap;
+
+                for (const auto& [symbol, targets] : dfa.states.at(state).transitions) {
+                    int targetPartition = -1;
+                    if (!targets.empty()) {
+                        int targetState = *targets.begin();
+                        for (size_t i = 0; i < partitions.size(); ++i) {
+                            if (partitions[i].count(targetState)) {
+                                targetPartition = static_cast<int>(i);
+                                break;
+                            }
+                        }
+                    }
+                    transitionMap[symbol] = targetPartition;
+                }
+                transitionGroups[transitionMap].insert(state);
+            }
+
+            // Create new partitions based on grouped states
+            for (const auto& [_, group] : transitionGroups) {
+                newPartitions.push_back(group);
+                if (group.size() < partition.size()) {
+                    isRefined = true;
+                }
+            }
+        }
+
+        partitions = std::move(newPartitions);
+    }
+
+    // Step 3: Build minimized DFA
+    DFA minimizedDFA;
+    std::unordered_map<int, int> stateMapping; // Maps old states to new states
+
+    int newStateID = 0;
+    for (const auto& partition : partitions) {
+        for (int state : partition) {
+            stateMapping[state] = newStateID;
+        }
+        DFAState newState;
+        newState.id = newStateID++;
+
+        // Aggregate transitions and token names
+        for (int state : partition) {
+            const auto& oldState = dfa.states.at(state);
+            newState.tokenNames.insert(oldState.tokenNames.begin(), oldState.tokenNames.end());
+
+            for (const auto& [symbol, targets] : oldState.transitions) {
+                if (!targets.empty()) {
+                    int targetState = *targets.begin();
+                    newState.transitions[symbol].insert(stateMapping[targetState]);
+                }
+            }
+        }
+
+        minimizedDFA.states[newState.id] = newState;
+    }
+
+    // Set start state
+    minimizedDFA.startState = stateMapping[dfa.startState];
+
+    // Set final states
+    for (int finalState : dfa.acceptedFinalStates) {
+        minimizedDFA.acceptedFinalStates.push_back(stateMapping[finalState]);
+    }
+
+    return minimizedDFA;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unordered_map<std::string, int> symbolTable;
@@ -530,13 +635,26 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
         } 
         else 
         {
-           // errorRecovery(input,position);
            // RECOVERY FUNCTION
-           std :: cout << "yes";
+            recoveryRoutine(input, position);
         }
+
+        while (position < input.size() && isspace(input[position])) {
+            position++;
+        }
+
     }
     return tokens;
 }
+
+void recoveryRoutine(const std::string& input, size_t& position) {
+    while (position < input.size() && !isspace(input[position])) {
+        position++;
+    }
+
+    std::cout << "Error: Invalid token found: " << input.substr(position) << std::endl;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 void write_output_to_file(const std::string filename,std::vector<std::pair<std::string, std::string>> tokens)
 {
@@ -655,7 +773,11 @@ std::string read_from_input_file(const std::string filename) {
         std::string input = read_from_input_file("in.txt");
         std :: cout << "input"<<input;
         tokenNamePriority = r.GetPriorities();
-        std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(NFAToDFA(combinedNFA), input);
+
+        DFA dfa = NFAToDFA(combinedNFA);
+        DFA minimized_dfa = minimizeDFA(dfa);
+
+        std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(minimized_dfa, input);
         write_output_to_file("output.txt",tokens);
         std::cout << "Tokens:\n";
         for (const auto& token : tokens) {
