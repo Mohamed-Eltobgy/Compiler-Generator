@@ -291,7 +291,14 @@ public:
                 charsOfKey.push_back(std::string(1, c));
             }
             NFA nfa = buildNFAFromRegex(charsOfKey);
-            nfa.states[nfa.finalState].tokenName = std::string(1, punc.back());
+           
+            char lastChar = punc.back();
+            std::string escapedChar = (lastChar == '(' || lastChar == ')' || lastChar == '[' || lastChar == ']') 
+                ? "\\" + std::string(1, lastChar) 
+                : std::string(1, lastChar);
+
+            nfa.states[nfa.finalState].tokenName = escapedChar;
+
 
             // add the new NFA to the combined NFA
             combinedNFA.states[0].transitions["\0"].insert(nfa.startState);
@@ -453,15 +460,23 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
 
     while (position<input.size()) 
     {
+     
         int currentState=dfa.startState;
         size_t lastMatchPos=position;
         std::string lastMatchedToken;
         bool matchFound=false;
+        bool space=false;
 
         //input character by character
         for (size_t i=position; i<input.size();++i) 
         {
             std::string currentChar(1, input[i]);
+            char ch=currentChar[0];
+            if(isspace(ch)){
+                space=true;
+                break;
+            }
+        
 
             // Check if there's a valid transition from the current state
             auto stateIt=dfa.states.find(currentState);
@@ -499,8 +514,13 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
         {
             //get the matched substring and add it to the symbol table
             std::string matchedSubstring=input.substr(position, lastMatchPos - position + 1);
+            if (space){
+                position=lastMatchPos+2;
+                space=false;
+            }
+            else{
             position=lastMatchPos+1;
-
+            }
             // Insert the token and its value into the symbol table if not already present
             if (symbolTable.find(matchedSubstring) == symbolTable.end()) {
                 symbolTable[matchedSubstring] = symbolTable.size() + 1;
@@ -512,6 +532,7 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
         {
            // errorRecovery(input,position);
            // RECOVERY FUNCTION
+           std :: cout << "yes";
         }
     }
     return tokens;
@@ -525,7 +546,16 @@ void write_output_to_file(const std::string filename,std::vector<std::pair<std::
         std::cerr << "Error while opening the file !!!!!!!!";
     }
     for (const auto& token : tokens) {
-        file_output << token.first << std::endl;
+        std::string processedToken = token.first;
+        for (size_t i=0;i< processedToken.size();++i) {
+            if (processedToken[i] == '\\' && i + 1 < processedToken.size() && (processedToken[i+1]=='(' || processedToken[i+1]==')'|| processedToken[i+1]=='[' || processedToken[i+1]==']') ) {
+                // Skip the escape character and take the next character
+                processedToken = processedToken.substr(0, i) + processedToken.substr(i + 1, 1) + processedToken.substr(i + 2);
+            }
+        }
+
+        // Write the processed token (with escaped characters handled)
+        file_output << processedToken << std::endl;
     }
     file_output.close();
     if (file_output.good()) {
@@ -546,9 +576,9 @@ std::string read_from_input_file(const std::string filename) {
     char ch;
     while (file_input.get(ch)) 
     {
-        if (!isspace(ch)) {
+        // if (!isspace(ch)) {
             result += ch;
-        }
+        // }
     }
     file_input.close();
     return result;
@@ -623,7 +653,7 @@ std::string read_from_input_file(const std::string filename) {
     ReToNFA() {
         buildCombinedNFA();
         std::string input = read_from_input_file("in.txt");
-        std :: cout << input;
+        std :: cout << "input"<<input;
         tokenNamePriority = r.GetPriorities();
         std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(NFAToDFA(combinedNFA), input);
         write_output_to_file("output.txt",tokens);
@@ -631,12 +661,10 @@ std::string read_from_input_file(const std::string filename) {
         for (const auto& token : tokens) {
             std::cout << "Token: " << token.first << ", Value: " << token.second << "\n";
         }
-
         std::cout << "\nSymbol Table:\n";
         for (const auto& entry : symbolTable) {
-            std::cout << "Symbol: " << entry.first << ", ID: " << entry.second << "\n";
+            std::cout << "Symbol: " << entry.first << "  ID: " << entry.second << "\n";
         }
-
             // print();
             // showNFAForInput(combinedNFA, "int");
         }

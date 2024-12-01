@@ -260,12 +260,12 @@ public:
     std::vector<std::string> GetPriorities() 
        {
             std::vector<std::string> result;
+            result.insert(result.end(), keywords.begin(), keywords.end());
+            result.insert(result.end(), punctuation.begin(), punctuation.end());
             for (const auto& [name, _] : regexRules) 
             {
                 result.push_back(name);
             }
-            result.insert(result.end(), keywords.begin(), keywords.end());
-            result.insert(result.end(), punctuation.begin(), punctuation.end());
             std::cout << "\n TOKEN NAMES PRIORITIES:\n";
             for (const auto& element : result) {
                 std::cout << element << " ";
