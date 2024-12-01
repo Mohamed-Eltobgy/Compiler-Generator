@@ -167,10 +167,10 @@ public:
             str.pop_back(); // Remove trailing space
     }
 
-    void editRegulars(std::vector<std::pair<std::string, std::string>>& defs, std::vector<std::pair<std::string, std::string>>& regexRules) {
+    void editRegulars() {
         std::unordered_map<std::string, std::string> substitute;
 
-        for (auto& [key, value] : defs) {
+        for (auto& [key, value] : definitions) {
             handleRanges(value);
             std::vector<std::string> temp = splitTokens(value);
             for (int i = 0; i < temp.size(); i++) {
@@ -184,10 +184,12 @@ public:
             substitute[key] = value;
         }
 
-        for (auto& [key, value] : defs) {
+        for (auto& [key, value] : definitions) {
             for (int i = 0; i < value.length(); i++) {
                 if (i > 0 && value[i] == '|' && value[i - 1] != '\\') {
-                    value.insert(i + 1, 1, '(');
+                    std::string before = value.substr(0, i+1);
+                    std::string after = value.substr(i + 1);
+                    value = before + "(" + after;
                     int count = 0;
                     int j;
                     for (j = i + 2; j < value.length(); j++) {
@@ -196,7 +198,9 @@ public:
                         } else if (value[j] == ')') {
                             count--;
                             if (count < 0) {
-                                value.insert(j + 1, 1, ')');
+                                std::string before = value.substr(0, j+1);
+                                std::string after = value.substr(j + 1);
+                                value = before + ")" + after;
                                 break;
                             }
                         }
@@ -206,12 +210,15 @@ public:
                     }
                 }
             }
+            substitute[key] = value;
         }
 
         for (auto& [key, value] : regexRules) {
             for (int i = 0; i < value.length(); i++) {
                 if (i > 0 && value[i] == '|' && value[i - 1] != '\\') {
-                    value.insert(i + 1, 1, '(');
+                    std::string before = value.substr(0, i+1);
+                    std::string after = value.substr(i + 1);
+                    value = before + "(" + after;
                     int count = 0;
                     int j;
                     for (j = i + 2; j < value.length(); j++) {
@@ -220,7 +227,9 @@ public:
                         } else if (value[j] == ')') {
                             count--;
                             if (count < 0) {
-                                value.insert(j + 1, 1, ')');
+                                std::string before = value.substr(0, j+1);
+                                std::string after = value.substr(j + 1);
+                                value = before + ")" + after;
                                 break;
                             }
                         }
@@ -231,19 +240,22 @@ public:
                 }
             }
         }
-        
-        for (auto& [key, value] : regexRules) {
-            handleRanges(value);
-            std::vector<std::string> temp = splitTokens(value);
+        for (int j = 0; j < regexRules.size(); j++) {
+            handleRanges(regexRules[j].second);
+            std::vector<std::string> temp = splitTokens(regexRules[j].second);
+            std::string tempStr = regexRules[j].second;
             for (int i = 0; i < temp.size(); i++) {
                 if (substitute.find(temp[i]) != substitute.end()) {
-                    int start = value.find(temp[i]);
-                    std::string before = value.substr(0, start);
-                    std::string after = value.substr(start + temp[i].length());
-                    value = before + substitute[temp[i]] + after;
+                    int start = tempStr.find(temp[i]);
+                    std::string before = tempStr.substr(0, start);
+                    std::string after = tempStr.substr(start + temp[i].length());
+                    std::string subs = substitute[temp[i]];
+                    tempStr = before + subs + after;
                 }
             }
+            regexRules[j].second = tempStr;
         }
+
     }
     std::vector<std::string> GetPriorities() 
        {
@@ -265,7 +277,7 @@ public:
 
     ReadInput() {
         parseInputFile("input.txt");
-        editRegulars(definitions, regexRules);
+        editRegulars();
         print();
     }
 };

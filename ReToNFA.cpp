@@ -199,8 +199,11 @@ public:
                     std::string  nextToken = (i + 1 < tokens.size()) ? tokens[i + 1] : "";
                     i += combineNFAs(nfaS, tokens[i], nextToken, isUnion, opHist.size());
                 } else if (tokens[i] == "(") {
-                    if (!nfaS.empty()) {
+                    if (nfaS.size() > opHist.size()) {
                         opHist.push(isUnion);
+                    } else if (nfaS.size() == opHist.size()) {
+                        opHist.push(isUnion);
+                        nfaS.push(createInitialNFA("\0"));
                     }
                     isUnion = false;
                 } else if (tokens[i] == ")") {
@@ -221,12 +224,14 @@ public:
                         NFA topNfa = nfaS.top();
                         nfaS.pop();
                         if (opHist.top()) {
-                            NFA newNfa = unionNFA(nfaS.top(), topNfa);
+                            NFA secTop = nfaS.top();
                             nfaS.pop();
+                            NFA newNfa = unionNFA(secTop, topNfa);
                             nfaS.push(newNfa);
                         } else {
-                            NFA newNfa = concatenateNFA(nfaS.top(), topNfa);
+                            NFA secTop = nfaS.top();
                             nfaS.pop();
+                            NFA newNfa = concatenateNFA(secTop, topNfa);
                             nfaS.push(newNfa);
                         }
                         opHist.pop();
@@ -249,14 +254,6 @@ public:
 
         for (int i = 0; i < parsedInput.regexRules.size(); i++) {
             std::vector<std::string> tokens = splitTokens(parsedInput.regexRules[i].second);
-        
-        
-            // for(auto& token : tokens)
-            //     std::cout <<token << "\n";
-            
-
-            // for(auto& token : tokens)
-            //     std::cout <<token << "\n";
             
             // build NFA for a single expression
             NFA nfa = buildNFAFromRegex(tokens);
@@ -294,7 +291,7 @@ public:
                 charsOfKey.push_back(std::string(1, c));
             }
             NFA nfa = buildNFAFromRegex(charsOfKey);
-            nfa.states[nfa.finalState].tokenName = punc;
+            nfa.states[nfa.finalState].tokenName = std::string(1, punc.back());
 
             // add the new NFA to the combined NFA
             combinedNFA.states[0].transitions["\0"].insert(nfa.startState);
@@ -557,10 +554,76 @@ std::string read_from_input_file(const std::string filename) {
     return result;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-ReToNFA() {
+
+    void showNFAForInput(const NFA& nfa, const std::string& input) {
+        // Function to compute epsilon closure for a set of states
+        auto epsilonClosure = [&](const std::set<int>& states) -> std::set<int> {
+            std::set<int> closure = states;
+            std::stack<int> stack;
+
+            for (int state : states) stack.push(state);
+
+            while (!stack.empty()) {
+                int current = stack.top();
+                stack.pop();
+
+                if (nfa.states.at(current).transitions.count("\0")) {
+                    for (int next : nfa.states.at(current).transitions.at("\0")) {
+                        if (closure.insert(next).second) {
+                            stack.push(next);
+                        }
+                    }
+                }
+            }
+
+            return closure;
+        };
+
+        // Start with the epsilon closure of the start state
+        std::set<int> currentStates = epsilonClosure({nfa.startState});
+        std::cout << "Starting at state(s): ";
+        for (int state : currentStates) std::cout << state << " ";
+        std::cout << "\n";
+
+        for (char c : input) {
+            std::cout << "Input: " << c << "\n";
+            std::set<int> nextStates;
+
+            // Process transitions for the current input character
+            for (int state : currentStates) {
+                if (nfa.states.at(state).transitions.count(std::string(1, c))) {
+                    const auto& targets = nfa.states.at(state).transitions.at(std::string(1, c));
+                    nextStates.insert(targets.begin(), targets.end());
+                    std::cout << "  State " << state << " -> ";
+                    for (int next : targets) std::cout << next << " ";
+                    std::cout << "\n";
+                } else {
+                    std::cout << "  State " << state << " has no transitions for input '" << c << "'\n";
+                }
+            }
+
+            // Include the epsilon closure of the next states
+            nextStates = epsilonClosure(nextStates);
+
+            if (nextStates.empty()) {
+                std::cout << "No transitions available. Input rejected.\n";
+                return;
+            }
+
+            currentStates = nextStates;
+        }
+
+        std::cout << "Ending at state(s): ";
+        for (int state : currentStates) {
+            std::cout << state << " " << nfa.states.at(state).tokenName;
+        }
+        std::cout << "\n";
+    }
+
+    ReToNFA() {
         buildCombinedNFA();
         std::string input = read_from_input_file("in.txt");
-        std :: cout << input ;
+        std :: cout << input;
         tokenNamePriority = r.GetPriorities();
         std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(NFAToDFA(combinedNFA), input);
         write_output_to_file("output.txt",tokens);
@@ -575,5 +638,11 @@ ReToNFA() {
         }
 
             // print();
+            // showNFAForInput(combinedNFA, "int");
         }
-};
+    };
+
+int main() {
+    ReToNFA();
+    return 0;
+}
