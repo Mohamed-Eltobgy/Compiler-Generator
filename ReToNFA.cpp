@@ -461,6 +461,10 @@ public:
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 DFA minimizeDFA(const DFA& dfa) {
+
+    // Print total number of states in DFA
+    std::cout << "Total number of states in DFA: " << dfa.states.size() << "\n";
+
     // Step 1: Partition into final and non-final states
     std::set<int> finalStates(dfa.acceptedFinalStates.begin(), dfa.acceptedFinalStates.end());
     std::set<int> nonFinalStates;
@@ -472,7 +476,39 @@ DFA minimizeDFA(const DFA& dfa) {
     }
 
     // Initial partition
-    std::vector<std::set<int>> partitions = {finalStates, nonFinalStates};
+    std::vector<std::set<int>> partitions = {};
+
+    // For finalState in final states, split into separate partitions by token names
+    std::set<int> processedStates;
+    for (int finalState : finalStates) {
+        // Skip already processed states
+        if (processedStates.count(finalState)) {
+            continue;
+        }
+
+        const auto& tokenNames = dfa.states.at(finalState).tokenNames;
+        std::set<int> partition = {finalState};
+        
+        // Compare with other final states
+        for (int state : finalStates) {
+            if (state != finalState && 
+                !processedStates.count(state) && 
+                dfa.states.at(state).tokenNames == tokenNames) {
+                partition.insert(state);
+                processedStates.insert(state); // Mark as processed
+            }
+        }
+
+        partitions.push_back(partition);
+        processedStates.insert(finalState); // Mark this state as processed
+    }
+
+
+    // add nonfinal partition
+    partitions.push_back(nonFinalStates);
+
+    // Print total partitions
+    std::cout << "Total number of partitions: " << partitions.size() << "\n";
 
     // Step 2: Refine partitions
     bool isRefined = true;
@@ -515,6 +551,23 @@ DFA minimizeDFA(const DFA& dfa) {
         partitions = std::move(newPartitions);
     }
 
+    // Print partitions for debugging
+    for (size_t i = 0; i < partitions.size(); ++i) {
+        std::cout << "Partition " << i << ": ";
+        // Print token name
+        std::cout << "Token names: ";
+        for (int state : partitions[i]) {
+            for (const std::string& tokenName : dfa.states.at(state).tokenNames) {
+                std::cout << tokenName << " ";
+            }
+        }
+        // for (int state : partitions[i]) {
+        //     std::cout << state << " ";
+        // }
+        std::cout << "\n";
+    }
+
+
     // Step 3: Build minimized DFA
     DFA minimizedDFA;
     std::unordered_map<int, int> stateMapping; // Maps old states to new states
@@ -534,7 +587,7 @@ DFA minimizeDFA(const DFA& dfa) {
 
             for (const auto& [symbol, targets] : oldState.transitions) {
                 if (!targets.empty()) {
-                    int targetState = *targets.begin();
+                    int targetState = *targets.begin(); // Assuming DFA is deterministic
                     newState.transitions[symbol].insert(stateMapping[targetState]);
                 }
             }
@@ -553,7 +606,7 @@ DFA minimizeDFA(const DFA& dfa) {
 
     return minimizedDFA;
 }
-
+    
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unordered_map<std::string, int> symbolTable;
 ReadInput r;
@@ -658,7 +711,7 @@ void recoveryRoutine(const std::string& input, size_t& position) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 void write_output_to_file(const std::string filename,std::vector<std::pair<std::string, std::string>> tokens)
 {
-    std::ofstream file_output (filename,std::ios::app);
+    std::ofstream file_output (filename,std::ios::trunc);
     if (!file_output)
     {
         std::cerr << "Error while opening the file !!!!!!!!";
@@ -774,6 +827,9 @@ std::string read_from_input_file(const std::string filename) {
         std :: cout << "input"<<input;
         tokenNamePriority = r.GetPriorities();
 
+        // Total number of states in NFA
+        std::cout << "Total number of states in NFA: " << combinedNFA.states.size() << "\n";
+
         DFA dfa = NFAToDFA(combinedNFA);
         DFA minimized_dfa = minimizeDFA(dfa);
 
@@ -787,10 +843,8 @@ std::string read_from_input_file(const std::string filename) {
         for (const auto& entry : symbolTable) {
             std::cout << "Symbol: " << entry.first << "  ID: " << entry.second << "\n";
         }
-            // print();
-            // showNFAForInput(combinedNFA, "int");
-        }
-    };
+    }
+};
 
 int main() {
     ReToNFA();
