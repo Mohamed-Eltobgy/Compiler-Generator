@@ -257,26 +257,25 @@ public:
         }
 
     }
-    std::vector<std::string> GetPriorities() 
-       {
-            std::vector<std::string> result;
-            result.insert(result.end(), keywords.begin(), keywords.end());
-            result.insert(result.end(), punctuation.begin(), punctuation.end());
-            for (const auto& [name, _] : regexRules) 
-            {
-                result.push_back(name);
-            }
-            std::cout << "\n TOKEN NAMES PRIORITIES:\n";
-            for (const auto& element : result) {
-                std::cout << element << " ";
-            }
-            std::cout << "\n----------------------------------------" << std::endl;
-            return result;
-        }
 
+    std::vector<std::string> GetPriorities() {
+        std::vector<std::string> result;
+        result.insert(result.end(), keywords.begin(), keywords.end());
+        result.insert(result.end(), punctuation.begin(), punctuation.end());
+        for (const auto& [name, _] : regexRules) 
+        {
+            result.push_back(name);
+        }
+        std::cout << "\n TOKEN NAMES PRIORITIES:\n";
+        for (const auto& element : result) {
+            std::cout << element << " ";
+        }
+        std::cout << "\n----------------------------------------" << std::endl;
+        return result;
+    }
 
     ReadInput() {
-        parseInputFile("input.txt");
+        parseInputFile("LexicalRules.txt");
         editRegulars();
         print();
     }
