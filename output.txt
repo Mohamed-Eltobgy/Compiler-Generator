@@ -1,4 +1,4 @@
-(
+int
 id
 ,
 id
@@ -7,7 +7,7 @@ id
 ,
 id
 ;
-(
+while
 (
 id
 relop

@@ -630,7 +630,22 @@ DFA minimizeDFA(const DFA& dfa) {
 }
     
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-std::unordered_map<std::string, int> symbolTable;
+struct SymbolEntry {
+    std::string lexeme; 
+    int value;         
+};
+
+std::unordered_map<int, SymbolEntry> symbolTable;
+
+void insertInSymbolTable(const std::string& matchedSubstring) {
+    for (const auto& [id,entry] : symbolTable) {
+        if (entry.lexeme == matchedSubstring) {
+            return;
+        }
+    }
+    int newId = symbolTable.size() + 1; 
+    symbolTable[newId] = {matchedSubstring};
+}
 ReadInput r;
 std::vector<std::string> tokenNamePriority;
 // Lexical Analyzer:Finds the longest prefix matching a regular expression
@@ -701,11 +716,9 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
             else{
             position=lastMatchPos+1;
             }
-            // Insert the token and its value into the symbol table if not already present
-            if (symbolTable.find(matchedSubstring) == symbolTable.end()) {
-                symbolTable[matchedSubstring] = symbolTable.size() + 1;
-            }
 
+            if(lastMatchedToken=="id")
+                insertInSymbolTable(matchedSubstring);
             tokens.emplace_back(lastMatchedToken,matchedSubstring);
         } 
         else 
@@ -863,7 +876,7 @@ std::string read_from_input_file(const std::string filename) {
         }
         std::cout << "\nSymbol Table:\n";
         for (const auto& entry : symbolTable) {
-            std::cout << "Symbol: " << entry.first << "  ID: " << entry.second << "\n";
+            std::cout << "Symbol: " << entry.second.lexeme << "  ID: " << entry.first << "\n";
         }
     }
 };
