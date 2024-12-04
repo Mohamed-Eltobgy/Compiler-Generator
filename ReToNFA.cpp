@@ -7,6 +7,7 @@
 #include <stack>
 #include "ReadInput.cpp"
 #include <queue>
+#include <iomanip> 
 
 struct MapHash {
     std::size_t operator()(const std::map<std::string, int>& m) const {
@@ -855,7 +856,59 @@ std::string read_from_input_file(const std::string filename) {
         }
         std::cout << "\n";
     }
+///////////////////////////////////////////////////////////////////////////////////////////////
+void writeDFATableToFile(const DFA& dfa, const std::string& filename) {
+    std::ofstream file(filename);
 
+    if (!file.is_open())
+    {std::cerr << "Error" << std::endl;return;}
+
+    //all possible symbols
+    std::set<std::string> allSymbols;
+    for (const auto& state : dfa.states) 
+    {
+        for (const auto& transition : state.second.transitions) 
+        {
+            allSymbols.insert(transition.first);
+        }
+    }
+
+ 
+    const int colWidth=15;
+    
+    //header
+    file << std::setw(colWidth) << "State";
+    for (const auto& symbol : allSymbols) 
+    {
+        file << std::setw(colWidth) << symbol;
+    }
+    file << "\n" << std::string(colWidth * (allSymbols.size() + 1), '-') << "\n";
+
+    //transitions
+    for (const auto& state : dfa.states) 
+    {
+        file << std::setw(colWidth) << state.first;
+        for (const auto& symbol : allSymbols) 
+        {
+            if (state.second.transitions.find(symbol) != state.second.transitions.end()) 
+            {
+                const auto& reachableStates = state.second.transitions.at(symbol);
+                std::string transitionStr = "";
+                for (int nextState : reachableStates)
+                {
+                    transitionStr += std::to_string(nextState) + " ";
+                }
+                file << std::setw(colWidth) << transitionStr;
+            } else 
+            {
+                file << std::setw(colWidth) << "None";
+            }
+        }
+        file << "\n";
+    }
+    file.close();
+}
+//////////////////////////////////////////////////////////////////////////////////////////////
     ReToNFA() {
         buildCombinedNFA();
         std::string input = read_from_input_file("in.txt");
@@ -867,6 +920,8 @@ std::string read_from_input_file(const std::string filename) {
 
         DFA dfa = NFAToDFA(combinedNFA);
         DFA minimized_dfa = minimizeDFA(dfa);
+
+        writeDFATableToFile(minimized_dfa,"dfa_transitions_table.txt");
 
         std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(minimized_dfa, input);
         write_output_to_file("output.txt",tokens);
