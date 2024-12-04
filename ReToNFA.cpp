@@ -470,7 +470,7 @@ DFA minimizeDFA(const DFA& dfa) {
     std::set<int> nonFinalStates;
 
     for (const auto& [id, state] : dfa.states) {
-        if (!finalStates.count(id)) {
+        if (finalStates.find(id) == finalStates.end()) {
             nonFinalStates.insert(id);
         }
     }
@@ -482,18 +482,35 @@ DFA minimizeDFA(const DFA& dfa) {
     std::set<int> processedStates;
     for (int finalState : finalStates) {
         // Skip already processed states
-        if (processedStates.count(finalState)) {
+        if (processedStates.find(finalState) != processedStates.end()) {
             continue;
         }
 
         const auto& tokenNames = dfa.states.at(finalState).tokenNames;
         std::set<int> partition = {finalState};
         
+        // Get highest priority token name 
+        std::string highestPriorityToken = *tokenNames.begin();
+        for (const std::string& tokenName : tokenNames) {
+            if (std::find(tokenNamePriority.begin(), tokenNamePriority.end(), tokenName) < std::find(tokenNamePriority.begin(), tokenNamePriority.end(), highestPriorityToken)) {
+                highestPriorityToken = tokenName;
+            }
+        }
+        
         // Compare with other final states
         for (int state : finalStates) {
+            
+            const auto& tokenNames_2 = dfa.states.at(state).tokenNames;
+            std::string highestPriorityToken_2 = *tokenNames_2.begin();
+            for (const std::string& tokenName : tokenNames_2) {
+                if (std::find(tokenNamePriority.begin(), tokenNamePriority.end(), tokenName) < std::find(tokenNamePriority.begin(), tokenNamePriority.end(), highestPriorityToken_2)) {
+                    highestPriorityToken_2 = tokenName;
+                }
+            }
+
             if (state != finalState && 
                 !processedStates.count(state) && 
-                dfa.states.at(state).tokenNames == tokenNames) {
+                highestPriorityToken == highestPriorityToken_2) {
                 partition.insert(state);
                 processedStates.insert(state); // Mark as processed
             }
@@ -577,12 +594,17 @@ DFA minimizeDFA(const DFA& dfa) {
         for (int state : partition) {
             stateMapping[state] = newStateID;
         }
+        newStateID++;
+    }
+    newStateID = 0;
+    for (const auto& partition : partitions) {
         DFAState newState;
         newState.id = newStateID++;
 
         // Aggregate transitions and token names
         for (int state : partition) {
             const auto& oldState = dfa.states.at(state);
+            // Todo: Add highest priority token name only
             newState.tokenNames.insert(oldState.tokenNames.begin(), oldState.tokenNames.end());
 
             for (const auto& [symbol, targets] : oldState.transitions) {
@@ -598,7 +620,7 @@ DFA minimizeDFA(const DFA& dfa) {
 
     // Set start state
     minimizedDFA.startState = stateMapping[dfa.startState];
-
+    
     // Set final states
     for (int finalState : dfa.acceptedFinalStates) {
         minimizedDFA.acceptedFinalStates.push_back(stateMapping[finalState]);
