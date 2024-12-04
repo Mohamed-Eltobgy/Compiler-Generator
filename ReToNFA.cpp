@@ -725,7 +725,7 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
         else 
         {
            // RECOVERY FUNCTION
-            recoveryRoutine(input, position);
+            recoveryRoutine_char(input, position);
         }
 
         while (position < input.size() && isspace(input[position])) {
@@ -736,13 +736,20 @@ std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa,
     return tokens;
 }
 
-void recoveryRoutine(const std::string& input, size_t& position) {
+void recoveryRoutine_space(const std::string& input, size_t& position) {
+    std::cout << "Error: Invalid token found: " << input.substr(position) << std::endl;
     while (position < input.size() && !isspace(input[position])) {
         position++;
     }
-
-    std::cout << "Error: Invalid token found: " << input.substr(position) << std::endl;
 }
+
+void recoveryRoutine_char(const std::string& input, size_t& position) {
+    std::cout << "Error: Invalid token found: " << input[position] << std::endl;
+    if (position < input.size()) {
+        position++;
+    }
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 void write_output_to_file(const std::string filename,std::vector<std::pair<std::string, std::string>> tokens)
