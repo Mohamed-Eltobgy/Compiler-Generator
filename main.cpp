@@ -1,12 +1,12 @@
-#include "include/ReadInput.cpp"
-#include "include/ReToNFA.cpp"
+#include "LexicalAnalyzerGenerator/ReadInput.cpp"
+#include "LexicalAnalyzerGenerator/ReToNFA.cpp"
 
 
 int main() {
-    const std::string input_filename = "input.txt";
-    const std::string lexical_rules_filename = "LexicalRules.txt";
-    const std::string output_filename = "output/output.txt";
-    const std::string dfa_transitions_filename = "output/dfa_transitions.txt";
+    const std::string input_filename = "LexicalAnalyzerGenerator/input.txt";
+    const std::string lexical_rules_filename = "LexicalAnalyzerGenerator/LexicalRules.txt";
+    const std::string output_filename = "LexicalAnalyzerGenerator/output/output.txt";
+    const std::string dfa_transitions_filename = "LexicalAnalyzerGenerator/output/dfa_transitions.txt";
     
     ReToNFA RE_NFA_DFA;
     ReadInput parsed_input;
