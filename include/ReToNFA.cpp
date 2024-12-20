@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <stack>
-#include "ReadInput.cpp"
 #include <queue>
 #include <iomanip> 
 
@@ -259,9 +258,8 @@ public:
         return nfaS.top();
     }
 
-    void buildCombinedNFA() {
+    NFA buildCombinedNFA(ReadInput parsedInput) {
         stateID = 1;
-        ReadInput parsedInput;
         combinedNFA = NFA{0};
         combinedNFA.states[0] = State{0};
 
@@ -321,6 +319,7 @@ public:
                 combinedNFA.states[id] = state;
             }
         }
+        return combinedNFA;
     }
 
     void print() {
@@ -462,10 +461,6 @@ public:
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 DFA minimizeDFA(const DFA& dfa) {
-
-    // Print total number of states in DFA
-    std::cout << "Total number of states in DFA: " << dfa.states.size() << "\n";
-
     // Step 1: Partition into final and non-final states
     std::set<int> finalStates(dfa.acceptedFinalStates.begin(), dfa.acceptedFinalStates.end());
     std::set<int> nonFinalStates;
@@ -525,9 +520,6 @@ DFA minimizeDFA(const DFA& dfa) {
     // add nonfinal partition
     partitions.push_back(nonFinalStates);
 
-    // Print total partitions
-    std::cout << "Total number of partitions: " << partitions.size() << "\n";
-
     // Step 2: Refine partitions
     bool isRefined = true;
     while (isRefined) {
@@ -568,23 +560,6 @@ DFA minimizeDFA(const DFA& dfa) {
 
         partitions = std::move(newPartitions);
     }
-
-    // Print partitions for debugging
-    for (size_t i = 0; i < partitions.size(); ++i) {
-        std::cout << "Partition " << i << ": ";
-        // Print token name
-        std::cout << "Token names: ";
-        for (int state : partitions[i]) {
-            for (const std::string& tokenName : dfa.states.at(state).tokenNames) {
-                std::cout << tokenName << " ";
-            }
-        }
-        // for (int state : partitions[i]) {
-        //     std::cout << state << " ";
-        // }
-        std::cout << "\n";
-    }
-
 
     // Step 3: Build minimized DFA
     DFA minimizedDFA;
@@ -647,7 +622,7 @@ void insertInSymbolTable(const std::string& matchedSubstring) {
     int newId = symbolTable.size() + 1; 
     symbolTable[newId] = {matchedSubstring};
 }
-ReadInput r;
+
 std::vector<std::string> tokenNamePriority;
 // Lexical Analyzer:Finds the longest prefix matching a regular expression
 std::vector<std::pair<std::string, std::string>> lexicalAnalyzer(const DFA& dfa, const std::string& input) {
@@ -772,11 +747,6 @@ void write_output_to_file(const std::string filename,std::vector<std::pair<std::
         file_output << processedToken << std::endl;
     }
     file_output.close();
-    if (file_output.good()) {
-        std::cout << "Data written successfully to " << filename << std::endl;
-    } else {
-        std::cerr << "Error while writing to the file." << std::endl;
-    }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string read_from_input_file(const std::string filename) {
@@ -914,36 +884,5 @@ void writeDFATableToFile(const DFA& dfa, const std::string& filename) {
         file << "\n";
     }
     file.close();
-}
-//////////////////////////////////////////////////////////////////////////////////////////////
-    ReToNFA() {
-        buildCombinedNFA();
-        std::string input = read_from_input_file("in.txt");
-        std :: cout << "input"<<input;
-        tokenNamePriority = r.GetPriorities();
-
-        // Total number of states in NFA
-        std::cout << "Total number of states in NFA: " << combinedNFA.states.size() << "\n";
-
-        DFA dfa = NFAToDFA(combinedNFA);
-        DFA minimized_dfa = minimizeDFA(dfa);
-
-        writeDFATableToFile(minimized_dfa,"dfa_transitions_table.txt");
-
-        std::vector<std::pair<std::string, std::string>> tokens = lexicalAnalyzer(minimized_dfa, input);
-        write_output_to_file("output.txt",tokens);
-        std::cout << "Tokens:\n";
-        for (const auto& token : tokens) {
-            std::cout << "Token: " << token.first << ", Value: " << token.second << "\n";
-        }
-        std::cout << "\nSymbol Table:\n";
-        for (const auto& entry : symbolTable) {
-            std::cout << "Symbol: " << entry.second.lexeme << "  ID: " << entry.first << "\n";
-        }
     }
 };
-
-int main() {
-    ReToNFA();
-    return 0;
-}

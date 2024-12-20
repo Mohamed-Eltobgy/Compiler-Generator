@@ -1,7 +1,5 @@
 /.vscode
-dfa_transitions_table.txt
 lex.yy.c
 lexer.l
-output.txt
 *.exe
 .DS_Store

@@ -266,17 +266,11 @@ public:
         {
             result.push_back(name);
         }
-        std::cout << "\n TOKEN NAMES PRIORITIES:\n";
-        for (const auto& element : result) {
-            std::cout << element << " ";
-        }
-        std::cout << "\n----------------------------------------" << std::endl;
         return result;
     }
 
-    ReadInput() {
-        parseInputFile("LexicalRules.txt");
+    void readLexicalRules(std::string lexicalRulesFilename) {
+        parseInputFile(lexicalRulesFilename);
         editRegulars();
-        print();
     }
 };
