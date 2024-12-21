@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
 #include <iostream>
-#include "ReadInput.cpp";
+#include "ReadGrammar.cpp";
 
 std::vector<std::vector<std::string>> createPredictionParsingTable(std::map<std::string, std::vector<std::string>> first,
     std::map<std::string, std::vector<std::string>> follow, std::set<std::string> terminalSet) {
