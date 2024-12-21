@@ -1,6 +1,4 @@
 /.vscode
-lex.yy.c
-lexer.l
 *.exe
 .DS_Store
 /*/

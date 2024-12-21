@@ -120,9 +120,9 @@ public:
     }
 ////////////////////////////////////////////////////
 };
-// int main() {
-//     ReadGrammar rg;
-//     rg.ParseGrammar("rules.txt");
-//     rg.printGrammar();
-//     return 0;
-// }
+int main() {
+    ReadGrammar rg;
+    rg.ParseGrammar("rules.txt");
+    rg.printGrammar();
+    return 0;
+}
