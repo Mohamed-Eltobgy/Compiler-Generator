@@ -4,12 +4,13 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 class ReadGrammar {
 public:
-    std::unordered_map<std::string, std::vector<std::string>> grammar;
+    std::unordered_map<std::string, std::vector<std::vector<std::string>>> grammar;
 
-    std::pair<std::string, std::string> split_line(const std::string& line) 
+    std::pair<std::string,std::string> splitLine(const std::string& line) 
     {
         std::string left,right;
         size_t pos=line.find("::=");
@@ -26,76 +27,102 @@ public:
         return std::make_pair(left,right);
     }
     //////////////////////////////////////////////////////////////////////////////////////////
-    std::vector<std::string> split_alternatives(const std::string& input) {
-        std::vector<std::string> alternatives;
+    std::vector<std::string> splitWithDelimiter(const std::string& input,char delimiter) 
+    {
+        std::vector<std::string> tokens;
         std::istringstream stream(input);
-        std::string segment;
-        while (std::getline(stream,segment,'|'))
+        std::string token;
+        while (std::getline(stream, token, delimiter)) 
         {
-            alternatives.push_back(segment);
+            if (!token.empty())
+            {tokens.push_back(token);}
         }
-        return alternatives;
+        return tokens;
     }
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    void ParseGrammar(const std::string& filename) {
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    void ParseGrammar(const std::string& filename) 
+    {
         std::ifstream file(filename);
         std::string line;
         std::string LFS;
         std::string RHS;
         std::vector<std::string> alternatives;
-        
-        if (!file.is_open()) 
-        {
+
+        if (!file.is_open()) {
             std::cerr << "Cannot open the file" << std::endl;
             return;
         }
-        std::string buffer; //accumulate lines that don't contain `::=` to handle more than 1 line productions
+        std::string buffer; // Accumulate lines that don't contain `::=` to handle more than 1-line productions
         int numberOfProductions=0;
+
         while (std::getline(file,line)) 
         {
-            if (!(line.find("::=") == std::string::npos))
-              numberOfProductions=numberOfProductions+1;
-              
-            if (numberOfProductions<2){
-                if (!buffer.empty()) 
-                   buffer += " ";
-                buffer += line;
+            if (!(line.find("::=")==std::string::npos))
+                numberOfProductions++;
+
+            if (numberOfProductions<2) 
+            {
+                if (!buffer.empty())
+                    buffer+=" ";
+                buffer+=line;
                 continue;
-            }
-            else{
+            } 
+            else 
+            {
                 LFS="";
                 RHS="";
-                auto production=split_line(buffer);
+                auto production=splitLine(buffer);
                 LFS=production.first;
                 RHS=production.second;
-                alternatives=split_alternatives(RHS);
-                grammar[LFS]=alternatives;
+                alternatives=splitWithDelimiter(RHS, '|');
+
+                std::vector<std::vector<std::string>> word_lists;
+                for (const auto& alt : alternatives) {
+                    word_lists.push_back(splitWithDelimiter(alt,' ')); 
+                }
+                grammar[LFS]=word_lists;
+
                 buffer=line;
                 numberOfProductions=1;
-            }    
+            }
         }
-        //remaining
         LFS="";
         RHS="";
-        auto production=split_line(buffer);
+        auto production=splitLine(buffer);
         LFS=production.first;
         RHS=production.second;
-        alternatives=split_alternatives(RHS);
-        grammar[LFS]=alternatives;
+        alternatives=splitWithDelimiter(RHS, '|'); 
+
+        std::vector<std::vector<std::string>> word_lists;
+        
+        for (const auto& alt : alternatives) 
+        {
+            word_lists.push_back(splitWithDelimiter(alt,' '));
+        }
+        grammar[LFS]=word_lists;
     }
+//////////////////////////////////////////////////////////
+ void printGrammar() {
+        for (const auto& rule : grammar) {
+            std::cout << rule.first << " => {" << std::endl;
+            for (const auto& alt : rule.second) {
+                std::cout << "    {";
+                for (size_t i = 0; i < alt.size(); ++i) {
+                    std::cout << "\"" << alt[i] << "\"";
+                    if (i != alt.size() - 1) {
+                        std::cout << ", ";
+                    }
+                }
+                std::cout << "}" << std::endl;
+            }
+            std::cout << "}" << std::endl;
+        }
+    }
+////////////////////////////////////////////////////
 };
 // int main() {
 //     ReadGrammar rg;
 //     rg.ParseGrammar("rules.txt");
-//     for (const auto& rule : rg.grammar) {
-//         std::cout <<rule.first << "  => {";
-//         for (size_t i=0;i<rule.second.size();++i) {
-//             std::cout << "\"" << rule.second[i] << "\"";
-//             if (i!=rule.second.size()-1) {
-//                 std::cout << ",";
-//             }
-//         }
-//         std::cout << "}" << std::endl;
-//     }
+//     rg.printGrammar();
 //     return 0;
 // }
