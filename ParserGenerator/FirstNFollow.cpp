@@ -8,9 +8,10 @@
 
 class FirstNFollow{
     public:
-        std::unordered_map<std::string,std::unordered_set<std::string>> firstSets;
         std::unordered_map<std::string,std::vector<std::vector<std::string>>> grammar;
-      
+        std::unordered_map<std::string,std::unordered_set<std::string>> firstSets;
+        std::unordered_map<std::string, std::unordered_set<std::string>> followSets;
+        
         void setGrammar(std::unordered_map<std::string, std::vector<std::vector<std::string>>> ReadGrammer)
         {grammar=ReadGrammer;}
 
@@ -83,20 +84,74 @@ class FirstNFollow{
 
             return result;
         }
-        ////////////////////////////////////////////////////////////////////////////
-       
+        //////////////////////////////////////////////////////////////////////////////////////////////
+        std::unordered_set<std::string> Follow(const std::string& NonTerminal, const std::string& startSymbol) 
+        {
+            if (followSets.find(NonTerminal)!=followSets.end())
+                return followSets[NonTerminal];
+
+            std::unordered_set<std::string> followSet;
+            if (NonTerminal==startSymbol) 
+                followSet.insert("$");
+        
+            for (const auto& rule:grammar) 
+            {
+                const std::string& LHS=rule.first;
+                const std::vector<std::vector<std::string>>& RHS=rule.second;
+
+                for (const auto& production:RHS) 
+                {
+                    for (size_t i=0;i<production.size();i++) 
+                    {
+                        if (production[i]==NonTerminal) 
+                        {
+                            if (i+1 < production.size()) 
+                            {
+                                // FIRST of the succeeding
+                                auto succeedingFirst=First(production[i+1]);
+                                followSet.insert(succeedingFirst.begin(),succeedingFirst.end());
+                                followSet.erase("ε");
+
+                                if (succeedingFirst.find("ε")!=succeedingFirst.end()) 
+                                {
+                                    auto followOfLHS=Follow(LHS,startSymbol);
+                                    followSet.insert(followOfLHS.begin(),followOfLHS.end());
+                                }
+                            } 
+                            else 
+                            {
+                                if (LHS!=NonTerminal) //nonterminal and itself
+                                { 
+                                    auto followOfLHS=Follow(LHS,startSymbol);
+                                    followSet.insert(followOfLHS.begin(),followOfLHS.end());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            followSets[NonTerminal]=followSet;
+            return followSet;
+        }
+
 };
 
-int main() 
-{
-    ReadGrammar ri;
-    ri.ParseGrammar("rules.txt");
-    FirstNFollow f;
-    f.setGrammar(ri.grammar);
-    std::unordered_set<std::string> bterm=f.First("bterm' bterm");
-    std::cout << "bterm first set: ";
-    for (const auto& symbol : bterm) 
-        std::cout<<symbol<<" ";
-    std::cout<<std::endl;
-    return 0;
-} 
+// int main() 
+// {
+//     ReadGrammar ri;
+//     ri.ParseGrammar("rules.txt");
+//     FirstNFollow f;
+//     f.setGrammar(ri.grammar);
+//     std::unordered_set<std::string> first=f.First("bterm' bterm");
+//     std::cout << "first set: ";
+//     for (const auto& symbol : first) 
+//         std::cout<<symbol<<" ";
+//     std::cout<<std::endl;
+
+//     std::unordered_set<std::string> follow=f.Follow("bexpr","bexpr");
+//     std::cout << "follow set: ";
+//     for (const auto& symbol : follow) 
+//         std::cout<<symbol<<" ";
+//     std::cout<<std::endl;
+//     return 0;
+// } 
