@@ -13,6 +13,10 @@ class FirstNFollow{
         std::unordered_map<std::string, std::unordered_set<std::string>> followSets;
         std::map<std::pair<std::string, std::string>, std::string> productionMap;
         std::string startSymbol;
+        // to avoid infinite recursion
+        std::unordered_map<std::string, bool> visitedFirst; 
+        std::unordered_map<std::string, bool> visitedFollow;
+
 
         void setGrammar(std::unordered_map<std::string, std::vector<std::vector<std::string>>> ReadGrammer) {
             grammar=ReadGrammer;
@@ -20,11 +24,13 @@ class FirstNFollow{
 
         std::unordered_set<std::string> First(const std::string& expression) 
         {
+            if (visitedFirst[expression]) return {};
+            visitedFirst[expression]=true;
             std::vector<std::string> tokens;
             std::istringstream iss(expression);
             std::string token;
             //all tokens if the expression contains more than 1 token
-            while (iss>>token) 
+             while (iss>>token) 
             {
                 tokens.push_back(token);
             }
@@ -32,7 +38,10 @@ class FirstNFollow{
             {
                 const std::string& singleToken=tokens[0];
                 if (firstSets.find(singleToken)!= firstSets.end()) 
-                {return firstSets[singleToken];}
+                {
+                    visitedFirst[expression]=false;
+                    return firstSets[singleToken];
+                }
 
                 std::unordered_set<std::string> fs;
 
@@ -45,30 +54,24 @@ class FirstNFollow{
                     for (const auto& production : grammar[singleToken]) //or
                     {
                         bool containsEpsilon=true;
-                        std::string pro = "";
-                        std::unordered_set<std::string> tempFs;
-                        for (const auto& prodSymbol:production) { // get complete production
-                            pro += prodSymbol + " ";
-                        }
                         for (const auto& prodSymbol:production) //concatenation
                         {
-                            auto symbolFirst = First(prodSymbol);
-                            fs.insert(symbolFirst.begin(), symbolFirst.end());
-                            tempFs.insert(symbolFirst.begin(), symbolFirst.end());
-
-                            if (symbolFirst.find("ε") == symbolFirst.end()) 
+                            if (prodSymbol==singleToken) 
                             {
+                                continue; //skip self-referential
+                            }
+                            auto symbolFirst=First(prodSymbol);
+                            fs.insert(symbolFirst.begin(),symbolFirst.end());
+                            if (symbolFirst.find("ε")==symbolFirst.end()) {
                                 containsEpsilon=false;
                                 break;
                             }
-                        }
-                        for (const auto& fss : tempFs) {
-                            productionMap[make_pair(singleToken, fss)] = pro;
                         }
                         if (containsEpsilon) fs.insert("ε");
                     }
                 }
                 firstSets[singleToken]=fs;
+                visitedFirst[expression]=false;
                 return fs;
             }
             //if expression contains more than one token
@@ -92,19 +95,25 @@ class FirstNFollow{
             }
             if (containsEpsilon) 
                 result.insert("ε");
-
+            visitedFirst[expression]=false;
             return result;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////
         std::unordered_set<std::string> Follow(const std::string& NonTerminal, const std::string& startSymbol) 
         {
-            if (followSets.find(NonTerminal)!=followSets.end())
+            if (visitedFollow[NonTerminal]) return {}; // to void infinite recursion 
+            visitedFollow[NonTerminal]=true;
+
+            if (followSets.find(NonTerminal)!=followSets.end()) 
+            {
+                visitedFollow[NonTerminal]=false;
                 return followSets[NonTerminal];
+            }
 
             std::unordered_set<std::string> followSet;
             if (NonTerminal==startSymbol) 
                 followSet.insert("$");
-        
+            
             for (const auto& rule:grammar) 
             {
                 const std::string& LHS=rule.first;
@@ -141,10 +150,12 @@ class FirstNFollow{
                     }
                 }
             }
+
             followSets[NonTerminal]=followSet;
+            visitedFollow[NonTerminal]=false;
             return followSet;
         }
-
+        /////////////////////////////////////////////////////////////////////////////////
         FirstNFollow (std::string path_to_rules) {
             ReadGrammar ri;
             ri.ParseGrammar(path_to_rules);
@@ -161,12 +172,23 @@ class FirstNFollow{
 
 // int main() 
 // {
-//     FirstNFollow();
-
-    // ReadGrammar ri;
-    // ri.ParseGrammar("rules.txt");
-    // FirstNFollow f;
-    // f.setGrammar(ri.grammar);
+//     // FirstNFollow();
+  
+//     ReadGrammar ri;
+//     ri.ParseGrammar("rules.txt");
+//     FirstNFollow f;
+//     f.setGrammar(ri.grammar);
+//         std::cout << "Grammar:\n";
+//     for (const auto& rule : f.grammar) {
+//         std::cout << rule.first << " -> ";
+//         for (const auto& production : rule.second) {
+//             for (const auto& symbol : production) {
+//                 std::cout << symbol << " ";
+//             }
+//             std::cout << "| ";
+//         }
+//         std::cout << "\n";
+//     }
     // for (auto it = f.grammar.begin(); it != f.grammar.end(); it++) {
     //     f.First(it->first);
     // }
@@ -192,5 +214,5 @@ class FirstNFollow{
     // for (const auto& symbol : follow) 
     //     std::cout<<symbol<<" ";
     // std::cout<<std::endl;
-//     return 0;
+    // return 0;
 // } 
