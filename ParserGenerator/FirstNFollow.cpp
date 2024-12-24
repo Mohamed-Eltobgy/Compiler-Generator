@@ -12,6 +12,7 @@ class FirstNFollow{
         std::unordered_map<std::string,std::unordered_set<std::string>> firstSets;
         std::unordered_map<std::string, std::unordered_set<std::string>> followSets;
         std::map<std::pair<std::string, std::string>, std::string> productionMap;
+        std::string startSymbol;
 
         void setGrammar(std::unordered_map<std::string, std::vector<std::vector<std::string>>> ReadGrammer) {
             grammar=ReadGrammer;
@@ -144,10 +145,11 @@ class FirstNFollow{
             return followSet;
         }
 
-        FirstNFollow () {
+        FirstNFollow (std::string path_to_rules) {
             ReadGrammar ri;
-            ri.ParseGrammar("rules.txt");
+            ri.ParseGrammar(path_to_rules);
             setGrammar(ri.grammar);
+            startSymbol = ri.startSymbol;
             for (auto it = grammar.begin(); it != grammar.end(); it++) {
                 First(it->first);
             }

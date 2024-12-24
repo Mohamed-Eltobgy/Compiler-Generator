@@ -1,13 +1,11 @@
 int
 id
-,
-id
-,
-id
-,
-id
 ;
-while
+id
+assign
+num
+;
+if
 (
 id
 relop
@@ -16,8 +14,6 @@ num
 {
 id
 assign
-id
-addop
 num
 ;
 }
