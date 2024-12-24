@@ -24,17 +24,24 @@ public:
     void parse(std::vector<std::pair<std::string, std::string>>& tokens) {
         stack.push("$");
         stack.push(startSymbol);
-        
+        derivation.push_back(startSymbol);
         for (int i = 0; i < tokens.size(); i++) {
             std::string top = stack.top();
+            std::cout << "Top: " << top << " Token: " << tokens[i].first << "\n";
             if (top == "$" && tokens[i].first == "$") { // Accept
                 std::cout << "Accepted\n";
                 break;
-            } else if (top == "ε" || top == "sync") {
+            } else if (top == "ε" ) {
                 stack.pop();
                 i--;
+                std::cout << "ε" << std::endl;
+            } else if (top == "sync") {
+                stack.pop();
+                i--;
+                std::cout << "Input Missing" << std::endl;
             } else if (top == tokens[i].first) {  // Match
                 stack.pop();
+                std::cout << "Match " << top << std::endl;
             } else if (productionMap.find(make_pair(top, tokens[i].first)) != productionMap.end()) { // replace with production
                 std::string production = productionMap[make_pair(top, tokens[i].first)];
                 stack.pop();
@@ -50,9 +57,12 @@ public:
                 for (auto it = tokensList.rbegin(); it != tokensList.rend(); ++it) {
                     stack.push(*it);
                 }
+                i--;
+
+                std::cout << " Replace production " << std::endl;
             } else { // error panic mode recovery
                 std::cout << "Error: " << "Top: " << top << " Token: " << tokens[i].first << "\n";
-                std::cout << "Error handled by skipping this token\n";
+                std::cout << "Error excess input\n";
             }
 
             std::stack<std::string> tempStack = stack;

@@ -54,6 +54,12 @@ class FirstNFollow{
                     for (const auto& production : grammar[singleToken]) //or
                     {
                         bool containsEpsilon=true;
+                        std::string pro = "";
+                        std::unordered_set<std::string> tempFs;
+                        for (const auto& prodSymbol:production) { // get complete production
+                            pro += prodSymbol + " ";
+                        }
+
                         for (const auto& prodSymbol:production) //concatenation
                         {
                             if (prodSymbol==singleToken) 
@@ -62,10 +68,14 @@ class FirstNFollow{
                             }
                             auto symbolFirst=First(prodSymbol);
                             fs.insert(symbolFirst.begin(),symbolFirst.end());
+                            tempFs.insert(symbolFirst.begin(), symbolFirst.end());
                             if (symbolFirst.find("ε")==symbolFirst.end()) {
                                 containsEpsilon=false;
                                 break;
                             }
+                        }
+                         for (const auto& fss : tempFs) {
+                            productionMap[make_pair(singleToken, fss)] = pro;
                         }
                         if (containsEpsilon) fs.insert("ε");
                     }

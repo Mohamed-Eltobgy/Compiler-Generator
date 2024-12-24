@@ -34,6 +34,8 @@ int main() {
         std::cout << "Symbol: " << entry.second << "\tID: " << entry.first << "\n";
     }
 
+    tokens.push_back({"$", "$"});
+    std::cout << "\n########## PARSINGGGGGG PHASEEEEEEE ##########\n\n\n";
     // Part 2: Parser Generator
     parser p(path_to_rules);
     p.parse(tokens);
