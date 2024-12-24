@@ -1,12 +1,14 @@
 #include "LexicalAnalyzerGenerator/ReadInput.cpp"
 #include "LexicalAnalyzerGenerator/ReToNFA.cpp"
-
+#include "ParserGenerator/Parser.cpp"
 
 int main() {
     const std::string input_filename = "LexicalAnalyzerGenerator/input.txt";
     const std::string lexical_rules_filename = "LexicalAnalyzerGenerator/LexicalRules.txt";
     const std::string output_filename = "LexicalAnalyzerGenerator/output/output.txt";
     const std::string dfa_transitions_filename = "LexicalAnalyzerGenerator/output/dfa_transitions.txt";
+    const std::string path_to_rules = "ParserGenerator/rules.txt";
+    const std::string outputFile = "ParserGenerator/output.txt";
     
     ReToNFA RE_NFA_DFA;
     ReadInput parsed_input;
@@ -27,7 +29,14 @@ int main() {
         std::cout << "Symbol: " << entry.second.lexeme << "\tID: " << entry.first << "\n";
     }
 
-    // Part 2: Parser Generator
+    std::cout << "\nTokens:\n";
+    for (const auto& entry : tokens) {
+        std::cout << "Symbol: " << entry.second << "\tID: " << entry.first << "\n";
+    }
 
+    // Part 2: Parser Generator
+    parser p(path_to_rules);
+    p.parse(tokens);
+    p.printDerivation(outputFile);
     return 0;
 }
