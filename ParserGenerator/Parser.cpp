@@ -5,10 +5,18 @@ public:
     std::map<std::pair<std::string, std::string>, std::string> productionMap;
     std::stack<std::string> stack;
     std::vector<std::string> derivation;
-    std::string startSymbol = "";
+    std::string startSymbol;
 
-    void createPredictionParsingTable(std::map<std::pair<std::string, std::string>, std::string>& productionMap,
-        std::unordered_map<std::string, std::unordered_set<std::string>> follow) {
+    void createPredictionParsingTable(std::unordered_map<std::string, std::unordered_set<std::string>> follow) {
+        std::cout << "follow in parser\n";
+        for (const auto& pair : follow) {
+            std::cout << pair.first << " follows: ";
+            for (const auto& follower : pair.second) {
+                std::cout << follower << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "\n\n\n";
         for (auto it = follow.begin(); it != follow.end(); it++) {
             std::string nonTerminal = it->first;
             std::string tmp = "sync";
@@ -41,7 +49,7 @@ public:
                 std::cout << "Input Missing" << std::endl;
             } else if (top == tokens[i].first) {  // Match
                 stack.pop();
-                std::cout << "Match " << top << std::endl;
+                std::cout << " -> Match " << top << std::endl;
             } else if (productionMap.find(make_pair(top, tokens[i].first)) != productionMap.end()) { // replace with production
                 std::string production = productionMap[make_pair(top, tokens[i].first)];
                 stack.pop();
@@ -59,17 +67,18 @@ public:
                 }
                 i--;
 
-                std::cout << " Replace production " << std::endl;
+                std::cout << " -> Replace production " << std::endl;
             } else { // error panic mode recovery
-                std::cout << "Error: " << "Top: " << top << " Token: " << tokens[i].first << "\n";
-                std::cout << "Error excess input\n";
+                std::cout << "Error excess input -> " << "Top: " << top << " Token: " << tokens[i].first << "\n";
             }
 
             std::stack<std::string> tempStack = stack;
+            std::string currDerivation = "";
             while (!tempStack.empty()) {
-                derivation.push_back(tempStack.top());
+                currDerivation += tempStack.top() + " ";
                 tempStack.pop();
             }
+            derivation.push_back(currDerivation);
         }
     }
 
@@ -91,24 +100,19 @@ public:
     parser(std::string path_to_rules) {
         FirstNFollow fnf(path_to_rules);
         productionMap = fnf.productionMap;
-        createPredictionParsingTable(fnf.productionMap, fnf.followSets);
         startSymbol = fnf.startSymbol ;
+        createPredictionParsingTable(fnf.followSets);
     }
 };
 
-// int main() {
-//     FirstNFollow fnf("rules.txt");
-//     parser p;
-//     p.productionMap = fnf.productionMap;
-//     p.createPredictionParsingTable(fnf.productionMap, fnf.followSets);
-//     p.startSymbol = fnf.startSymbol ;
-//     for (const auto& pair : fnf.productionMap) {
-//         const std::pair<std::string, std::string>& key = pair.first;
-//         const std::string& value = pair.second;
+int main() {
+    parser p("rules.txt");
+    for (const auto& pair : p.productionMap) {
+        const std::pair<std::string, std::string>& key = pair.first;
+        const std::string& value = pair.second;
 
-//         std::cout << "Non terminal: " << key.first << "  terminal: "<< key.second <<"\nValues: " << value;
-//         std::cout << "\n";
-//         std::cout << "\n";
-//     }
-//     return 0;
-// }
+        std::cout << "Non terminal: " << key.first << "  terminal: " << key.second << "\nValues: " << value ;
+        std::cout << "\n\n";
+    }
+    return 0;
+}

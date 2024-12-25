@@ -35,7 +35,7 @@ int main() {
     }
 
     tokens.push_back({"$", "$"});
-    std::cout << "\n########## PARSINGGGGGG PHASEEEEEEE ##########\n\n\n";
+    std::cout << "\n########## PARSINGGGGGG PHASEEEEEEE ##########\n\n";
     // Part 2: Parser Generator
     parser p(path_to_rules);
     p.parse(tokens);

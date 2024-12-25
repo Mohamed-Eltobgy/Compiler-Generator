@@ -8,8 +8,8 @@
 
 class FirstNFollow{
     public:
-        std::unordered_map<std::string,std::vector<std::vector<std::string>>> grammar;
-        std::unordered_map<std::string,std::unordered_set<std::string>> firstSets;
+        std::unordered_map<std::string, std::vector<std::vector<std::string>>> grammar;
+        std::unordered_map<std::string, std::unordered_set<std::string>> firstSets;
         std::unordered_map<std::string, std::unordered_set<std::string>> followSets;
         std::map<std::pair<std::string, std::string>, std::string> productionMap;
         std::string startSymbol;
@@ -177,6 +177,24 @@ class FirstNFollow{
             for (auto it = grammar.begin(); it != grammar.end(); it++) {
                 Follow(it->first, ri.startSymbol);
             }
+            std::cout << "First in fnf:\n";
+            for (const auto& pair : firstSets) {
+                std::cout << pair.first << " first: ";
+                for (const auto& follower : pair.second) {
+                    std::cout << follower << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            std::cout << "Follow in fnf:\n";
+            for (const auto& pair : followSets) {
+                std::cout << pair.first << " follows: ";
+                for (const auto& follower : pair.second) {
+                    std::cout << follower << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
         }
 };
 
