@@ -262,6 +262,11 @@ public:
         std::vector<std::string> result;
         result.insert(result.end(), keywords.begin(), keywords.end());
         result.insert(result.end(), punctuation.begin(), punctuation.end());
+        for (auto& x : result) {
+            if (x.size() == 2 && x[0] == '\\') {
+                x = std::string(1, x[1]);
+            }
+        }
         for (const auto& [name, _] : regexRules) 
         {
             result.push_back(name);

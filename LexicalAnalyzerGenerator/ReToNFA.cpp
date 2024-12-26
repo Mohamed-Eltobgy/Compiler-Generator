@@ -304,12 +304,7 @@ public:
             NFA nfa = buildNFAFromRegex(charsOfKey);
            
             char lastChar = punc.back();
-            std::string escapedChar = (lastChar == '(' || lastChar == ')' || lastChar == '[' || lastChar == ']') 
-                ? "\\" + std::string(1, lastChar) 
-                : std::string(1, lastChar);
-
-            nfa.states[nfa.finalState].tokenName = escapedChar;
-
+            nfa.states[nfa.finalState].tokenName = std::string(1, lastChar);
 
             // add the new NFA to the combined NFA
             combinedNFA.states[0].transitions["\0"].insert(nfa.startState);
@@ -767,122 +762,57 @@ std::string read_from_input_file(const std::string filename) {
     file_input.close();
     return result;
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    void showNFAForInput(const NFA& nfa, const std::string& input) {
-        // Function to compute epsilon closure for a set of states
-        auto epsilonClosure = [&](const std::set<int>& states) -> std::set<int> {
-            std::set<int> closure = states;
-            std::stack<int> stack;
-
-            for (int state : states) stack.push(state);
-
-            while (!stack.empty()) {
-                int current = stack.top();
-                stack.pop();
-
-                if (nfa.states.at(current).transitions.count("\0")) {
-                    for (int next : nfa.states.at(current).transitions.at("\0")) {
-                        if (closure.insert(next).second) {
-                            stack.push(next);
-                        }
-                    }
-                }
-            }
-
-            return closure;
-        };
-
-        // Start with the epsilon closure of the start state
-        std::set<int> currentStates = epsilonClosure({nfa.startState});
-        std::cout << "Starting at state(s): ";
-        for (int state : currentStates) std::cout << state << " ";
-        std::cout << "\n";
-
-        for (char c : input) {
-            std::cout << "Input: " << c << "\n";
-            std::set<int> nextStates;
-
-            // Process transitions for the current input character
-            for (int state : currentStates) {
-                if (nfa.states.at(state).transitions.count(std::string(1, c))) {
-                    const auto& targets = nfa.states.at(state).transitions.at(std::string(1, c));
-                    nextStates.insert(targets.begin(), targets.end());
-                    std::cout << "  State " << state << " -> ";
-                    for (int next : targets) std::cout << next << " ";
-                    std::cout << "\n";
-                } else {
-                    std::cout << "  State " << state << " has no transitions for input '" << c << "'\n";
-                }
-            }
-
-            // Include the epsilon closure of the next states
-            nextStates = epsilonClosure(nextStates);
-
-            if (nextStates.empty()) {
-                std::cout << "No transitions available. Input rejected.\n";
-                return;
-            }
-
-            currentStates = nextStates;
-        }
-
-        std::cout << "Ending at state(s): ";
-        for (int state : currentStates) {
-            std::cout << state << " " << nfa.states.at(state).tokenName;
-        }
-        std::cout << "\n";
-    }
 ///////////////////////////////////////////////////////////////////////////////////////////////
-void writeDFATableToFile(const DFA& dfa, const std::string& filename) {
-    std::ofstream file(filename);
+    void writeDFATableToFile(const DFA& dfa, const std::string& filename) {
+        std::ofstream file(filename);
 
-    if (!file.is_open())
-    {std::cerr << "Error" << std::endl;return;}
+        if (!file.is_open())
+        {std::cerr << "Error" << std::endl;return;}
 
-    //all possible symbols
-    std::set<std::string> allSymbols;
-    for (const auto& state : dfa.states) 
-    {
-        for (const auto& transition : state.second.transitions) 
+        //all possible symbols
+        std::set<std::string> allSymbols;
+        for (const auto& state : dfa.states) 
         {
-            allSymbols.insert(transition.first);
+            for (const auto& transition : state.second.transitions) 
+            {
+                allSymbols.insert(transition.first);
+            }
         }
-    }
 
- 
-    const int colWidth=15;
     
-    //header
-    file << std::setw(colWidth) << "State";
-    for (const auto& symbol : allSymbols) 
-    {
-        file << std::setw(colWidth) << symbol;
-    }
-    file << "\n" << std::string(colWidth * (allSymbols.size() + 1), '-') << "\n";
-
-    //transitions
-    for (const auto& state : dfa.states) 
-    {
-        file << std::setw(colWidth) << state.first;
+        const int colWidth=15;
+        
+        //header
+        file << std::setw(colWidth) << "State";
         for (const auto& symbol : allSymbols) 
         {
-            if (state.second.transitions.find(symbol) != state.second.transitions.end()) 
-            {
-                const auto& reachableStates = state.second.transitions.at(symbol);
-                std::string transitionStr = "";
-                for (int nextState : reachableStates)
-                {
-                    transitionStr += std::to_string(nextState) + " ";
-                }
-                file << std::setw(colWidth) << transitionStr;
-            } else 
-            {
-                file << std::setw(colWidth) << "None";
-            }
+            file << std::setw(colWidth) << symbol;
         }
-        file << "\n";
-    }
-    file.close();
+        file << "\n" << std::string(colWidth * (allSymbols.size() + 1), '-') << "\n";
+
+        //transitions
+        for (const auto& state : dfa.states) 
+        {
+            file << std::setw(colWidth) << state.first;
+            for (const auto& symbol : allSymbols) 
+            {
+                if (state.second.transitions.find(symbol) != state.second.transitions.end()) 
+                {
+                    const auto& reachableStates = state.second.transitions.at(symbol);
+                    std::string transitionStr = "";
+                    for (int nextState : reachableStates)
+                    {
+                        transitionStr += std::to_string(nextState) + " ";
+                    }
+                    file << std::setw(colWidth) << transitionStr;
+                } else 
+                {
+                    file << std::setw(colWidth) << "None";
+                }
+            }
+            file << "\n";
+        }
+        file.close();
     }
 };

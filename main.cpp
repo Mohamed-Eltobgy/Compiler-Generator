@@ -9,6 +9,7 @@ int main() {
     const std::string dfa_transitions_filename = "LexicalAnalyzerGenerator/output/dfa_transitions.txt";
     const std::string path_to_rules = "ParserGenerator/rules.txt";
     const std::string outputFile = "ParserGenerator/output.txt";
+    const std::string parsing_table_filename = "ParserGenerator/parsing_table.txt";
     
     ReToNFA RE_NFA_DFA;
     ReadInput parsed_input;
@@ -35,10 +36,15 @@ int main() {
     }
 
     tokens.push_back({"$", "$"});
-    std::cout << "\n########## PARSINGGGGGG PHASEEEEEEE ##########\n\n";
+    std::cout << "\n########## PARSING PHASE ##########\n\n";
     // Part 2: Parser Generator
     parser p(path_to_rules);
-    p.parse(tokens);
-    p.printDerivation(outputFile);
+    if (!p.isLL1) {
+        std::cout << "Error: Grammar is not LL(1)";
+    } else {
+        p.parse(tokens);
+        p.printDerivation(outputFile);
+        p.writeParsingTableToFile(parsing_table_filename);
+    }
     return 0;
 }

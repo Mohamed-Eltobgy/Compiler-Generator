@@ -6,25 +6,26 @@ public:
     std::stack<std::string> stack;
     std::vector<std::string> derivation;
     std::string startSymbol;
+    bool isLL1 = true;
 
     void createPredictionParsingTable(std::unordered_map<std::string, std::unordered_set<std::string>> follow) {
-        std::cout << "follow in parser\n";
-        for (const auto& pair : follow) {
-            std::cout << pair.first << " follows: ";
-            for (const auto& follower : pair.second) {
-                std::cout << follower << " ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << "\n\n\n";
         for (auto it = follow.begin(); it != follow.end(); it++) {
             std::string nonTerminal = it->first;
-            std::string tmp = "sync";
+            std::string temp = "sync";
             if (productionMap.find(make_pair(nonTerminal, "ε")) != productionMap.end()) {
-                tmp = productionMap[make_pair(nonTerminal, "ε")];
+                temp = productionMap[make_pair(nonTerminal, "ε")];
             }
             for (auto f : it->second) {
-                productionMap[make_pair(nonTerminal, f)] = tmp;
+                if (temp == "sync" && productionMap.find(make_pair(nonTerminal, f)) != productionMap.end()) {
+                    continue;
+                } else if (temp == "ε" && productionMap.find(make_pair(nonTerminal, f)) != productionMap.end()) {
+                    isLL1 = false;
+                    break;
+                }
+                productionMap[make_pair(nonTerminal, f)] = temp;
+            }
+            if (!isLL1) {
+                break;
             }
         }
     }
@@ -32,53 +33,74 @@ public:
     void parse(std::vector<std::pair<std::string, std::string>>& tokens) {
         stack.push("$");
         stack.push(startSymbol);
-        derivation.push_back(startSymbol);
+        
+        std::string currentForm = startSymbol; 
+        derivation.push_back(currentForm);
+
+        std::set<std::string> nonTerminals;
+        nonTerminals.insert("$");
+        for (auto x : productionMap) {
+            nonTerminals.insert(x.first.first);
+        }
+
         for (int i = 0; i < tokens.size(); i++) {
             std::string top = stack.top();
             std::cout << "Top: " << top << " Token: " << tokens[i].first << "\n";
-            if (top == "$" && tokens[i].first == "$") { // Accept
-                std::cout << "Accepted\n";
-                break;
-            } else if (top == "ε" ) {
-                stack.pop();
-                i--;
-                std::cout << "ε" << std::endl;
-            } else if (top == "sync") {
-                stack.pop();
-                i--;
-                std::cout << "Input Missing" << std::endl;
-            } else if (top == tokens[i].first) {  // Match
-                stack.pop();
-                std::cout << " -> Match " << top << std::endl;
-            } else if (productionMap.find(make_pair(top, tokens[i].first)) != productionMap.end()) { // replace with production
-                std::string production = productionMap[make_pair(top, tokens[i].first)];
-                stack.pop();
-                
-                std::istringstream iss(production);
-                std::string token;
-                std::vector<std::string> tokensList;
+            
+            if (nonTerminals.find(top) != nonTerminals.end()) {
+                if (top == "$" && tokens[i].first == "$") {
+                    stack.pop();
+                    std::cout << "Accepted: Stack is empty\n";
+                } else if (top == "sync") {
+                    stack.pop();
+                    i--;
+                    std::cout << " -> Sync with input" << std::endl;
+                } else if (productionMap.find(make_pair(top, tokens[i].first)) != productionMap.end()) {
+                    std::string production = productionMap[make_pair(top, tokens[i].first)];
+                    stack.pop();
+                    
+                    // Update the current sentential form by replacing the leftmost occurrence
+                    // of the non-terminal (top) with its production
+                    size_t pos = currentForm.find(top);
+                    std::string temp = (production == "ε") ? "" : production;                    
+                    if (pos != std::string::npos) {
+                        currentForm = currentForm.substr(0, pos) + temp + currentForm.substr(pos + top.length());
+                        derivation.push_back(currentForm);
+                    }
 
-                while (iss >> token) {
-                    tokensList.push_back(token);
+                    std::istringstream iss(production);
+                    std::string token;
+                    std::vector<std::string> tokensList;
+
+                    while (iss >> token) {
+                        tokensList.push_back(token);
+                    }
+
+                    for (auto it = tokensList.rbegin(); it != tokensList.rend(); ++it) {
+                        stack.push(*it);
+                    }
+                    i--;
+
+                    std::cout << " -> Replace production " << std::endl;
+                } else {
+                    std::cout << " -> Error excess input -> " << "Top: " << top << " Token: " << tokens[i].first << "\n";
                 }
-
-                for (auto it = tokensList.rbegin(); it != tokensList.rend(); ++it) {
-                    stack.push(*it);
+            } else {
+                if (top == tokens[i].first) {
+                    stack.pop();
+                    std::cout << " -> Match " << top << std::endl;
+                } else if (top == "ε") {
+                    stack.pop();
+                    i--;
+                    std::cout << " -> Remove ε" << std::endl;
+                } else {
+                    std::cout << " -> Error missing input: " << top << "\n";
                 }
-                i--;
-
-                std::cout << " -> Replace production " << std::endl;
-            } else { // error panic mode recovery
-                std::cout << "Error excess input -> " << "Top: " << top << " Token: " << tokens[i].first << "\n";
             }
+        }
 
-            std::stack<std::string> tempStack = stack;
-            std::string currDerivation = "";
-            while (!tempStack.empty()) {
-                currDerivation += tempStack.top() + " ";
-                tempStack.pop();
-            }
-            derivation.push_back(currDerivation);
+        if (!stack.empty()) {
+            std::cout << "Error: Stack is not empty.\n";
         }
     }
 
@@ -89,18 +111,69 @@ public:
             return;
         }
 
-        for (const auto& curr : derivation) {
-            outFile << curr << std::endl;
+        for (size_t i = 0; i < derivation.size(); i++) {
+            outFile << derivation[i] << std::endl;
         }
 
         outFile.close();
-        std::cout << "Vector contents written to output.txt" << std::endl;
+    }
+
+    std::string centerText(const std::string& text, int width) {
+        if (text.size() >= width) return text; // Return as-is if longer than width.
+        int padding = width - text.size();
+        int padLeft = padding / 2;
+        int padRight = padding - padLeft;
+        return std::string(padLeft, ' ') + text + std::string(padRight, ' ');
+    }
+
+    void writeParsingTableToFile(const std::string& filename) {
+        std::ofstream file(filename);
+
+        if (!file.is_open()) {
+            std::cerr << "Error: Cannot open file" << std::endl;
+            return;
+        }
+
+        std::set<std::string> terminals;
+        std::set<std::string> nonTerminals;
+
+        for (auto x : productionMap) {
+            nonTerminals.insert(x.first.first);
+            terminals.insert(x.first.second);
+        }
+        terminals.erase("ε");
+        const int colWidth = 55;
+        const int totalWidth = colWidth * (terminals.size() + 1);
+
+        // Header row
+        file << centerText("Symbol", colWidth);
+        for (const auto& terminal : terminals) {
+            file << centerText(terminal, colWidth);
+        }
+        file << "\n" << std::string(totalWidth, '-') << "\n";
+
+        for (const auto& nonTerminal : nonTerminals) {
+            file << centerText(nonTerminal, colWidth); // Non-terminal in the first column
+            for (const auto& terminal : terminals) {
+                std::string cellContent;
+                if (productionMap.find({nonTerminal, terminal}) != productionMap.end()) {
+                    cellContent = productionMap[{nonTerminal, terminal}];
+                } else {
+                    cellContent = "Error";
+                }
+                file << centerText(cellContent, colWidth); // Center content in cell
+            }
+            file << "\n";
+        }
+
+        file.close();
     }
 
     parser(std::string path_to_rules) {
         FirstNFollow fnf(path_to_rules);
         productionMap = fnf.productionMap;
-        startSymbol = fnf.startSymbol ;
+        startSymbol = fnf.startSymbol;
+        isLL1 = fnf.isLL1;
         createPredictionParsingTable(fnf.followSets);
     }
 };
