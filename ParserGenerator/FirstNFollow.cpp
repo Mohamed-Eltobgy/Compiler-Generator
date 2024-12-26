@@ -138,7 +138,15 @@ class FirstNFollow{
                             if (i+1 < production.size()) 
                             {
                                 // FIRST of the succeeding
-                                auto succeedingFirst=First(production[i+1]);
+                                std::string succeeding;
+                                for (size_t sama=i+1;sama<production.size();++sama) 
+                                {
+                                    succeeding+=production[sama];
+                                    if (i < production.size()-1) {
+                                        succeeding+=" ";
+                                    }
+                                }
+                                auto succeedingFirst=First(succeeding);
                                 followSet.insert(succeedingFirst.begin(),succeedingFirst.end());
                                 followSet.erase("ε");
 
@@ -244,3 +252,9 @@ class FirstNFollow{
     // std::cout<<std::endl;
     // return 0;
 // } 
+
+int main() {
+    std::string grammarFile = "rules.txt";
+    FirstNFollow fnf(grammarFile);
+    return 0;
+}

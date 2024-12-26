@@ -105,14 +105,14 @@ public:
     }
 };
 
-int main() {
-    parser p("rules.txt");
-    for (const auto& pair : p.productionMap) {
-        const std::pair<std::string, std::string>& key = pair.first;
-        const std::string& value = pair.second;
+// int main() {
+//     parser p("rules.txt");
+//     for (const auto& pair : p.productionMap) {
+//         const std::pair<std::string, std::string>& key = pair.first;
+//         const std::string& value = pair.second;
 
-        std::cout << "Non terminal: " << key.first << "  terminal: " << key.second << "\nValues: " << value ;
-        std::cout << "\n\n";
-    }
-    return 0;
-}
+//         std::cout << "Non terminal: " << key.first << "  terminal: " << key.second << "\nValues: " << value ;
+//         std::cout << "\n\n";
+//     }
+//     return 0;
+// }
