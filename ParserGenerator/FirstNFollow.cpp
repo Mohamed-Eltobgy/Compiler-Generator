@@ -68,6 +68,9 @@ class FirstNFollow{
                                 continue; //skip self-referential
                             }
                             auto symbolFirst=First(prodSymbol);
+                            std::unordered_set<std::string> symbolFirstCopy(symbolFirst.begin(),symbolFirst.end());
+                            symbolFirstCopy.erase("ε");
+                            fs.insert(symbolFirstCopy.begin(),symbolFirstCopy.end());
                             fs.insert(symbolFirst.begin(),symbolFirst.end());
                             tempFs.insert(symbolFirst.begin(), symbolFirst.end());
                             if (symbolFirst.find("ε")==symbolFirst.end()) {
