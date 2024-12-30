@@ -7,7 +7,7 @@ int main() {
     const std::string lexical_rules_filename = "LexicalAnalyzerGenerator/LexicalRules.txt";
     const std::string output_filename = "LexicalAnalyzerGenerator/output/output.txt";
     const std::string dfa_transitions_filename = "LexicalAnalyzerGenerator/output/dfa_transitions.txt";
-    const std::string path_to_rules = "ParserGenerator/rules.txt";
+    const std::string path_to_rules = "ParserGenerator/cfg_input.txt";
     const std::string outputFile = "ParserGenerator/output.txt";
     const std::string parsing_table_filename = "ParserGenerator/parsing_table.txt";
     
