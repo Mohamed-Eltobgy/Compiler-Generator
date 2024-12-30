@@ -71,8 +71,7 @@ class FirstNFollow{
                             std::unordered_set<std::string> symbolFirstCopy(symbolFirst.begin(),symbolFirst.end());
                             symbolFirstCopy.erase("ε");
                             fs.insert(symbolFirstCopy.begin(),symbolFirstCopy.end());
-                            fs.insert(symbolFirst.begin(),symbolFirst.end());
-                            tempFs.insert(symbolFirst.begin(), symbolFirst.end());
+                            tempFs.insert(symbolFirstCopy.begin(), symbolFirstCopy.end());
                             if (symbolFirst.find("ε")==symbolFirst.end()) {
                                 containsEpsilon=false;
                                 break;
@@ -85,7 +84,10 @@ class FirstNFollow{
                             }
                             productionMap[make_pair(singleToken, fss)] = pro;
                         }
-                        if (containsEpsilon) fs.insert("ε");
+                        if (containsEpsilon) {
+                            fs.insert("ε");
+                            productionMap[make_pair(singleToken, "ε")] = pro;
+                        }
                     }
                 }
                 firstSets[singleToken]=fs;

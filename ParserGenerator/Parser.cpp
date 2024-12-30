@@ -51,23 +51,23 @@ public:
                 if (top == "$" && tokens[i].first == "$") {
                     stack.pop();
                     std::cout << "Accepted: Stack is empty\n";
-                } else if (top == "sync") {
-                    stack.pop();
-                    i--;
-                    std::cout << " -> Sync with input" << std::endl;
-                } else if (productionMap.find(make_pair(top, tokens[i].first)) != productionMap.end()) {
+                }else if (productionMap.find(make_pair(top, tokens[i].first)) != productionMap.end()) {
                     std::string production = productionMap[make_pair(top, tokens[i].first)];
                     stack.pop();
                     
                     // Update the current sentential form by replacing the leftmost occurrence
                     // of the non-terminal (top) with its production
                     size_t pos = currentForm.find(top);
-                    std::string temp = (production == "ε") ? "" : production;                    
+                    std::string temp = (production == "ε") ? "" : production;
+                    currentForm += " ";
                     if (pos != std::string::npos) {
-                        currentForm = currentForm.substr(0, pos) + temp + currentForm.substr(pos + top.length());
+                        if (temp.length() == 0)
+                            currentForm = currentForm.substr(0, pos) + currentForm.substr(pos + top.length() + 1);
+                        else
+                            currentForm = currentForm.substr(0, pos) + temp + currentForm.substr(pos + top.length());
                         derivation.push_back(currentForm);
                     }
-
+                    currentForm.pop_back();
                     std::istringstream iss(production);
                     std::string token;
                     std::vector<std::string> tokensList;
@@ -83,19 +83,22 @@ public:
 
                     std::cout << " -> Replace production " << std::endl;
                 } else {
-                    std::cout << " -> Error excess input -> " << "Top: " << top << " Token: " << tokens[i].first << "\n";
+                    std::cout << " -> Error excess input -> Ignore current token.\n";
                 }
             } else {
                 if (top == tokens[i].first) {
-                    stack.pop();
                     std::cout << " -> Match " << top << std::endl;
                 } else if (top == "ε") {
-                    stack.pop();
                     i--;
                     std::cout << " -> Remove ε" << std::endl;
+                } else if (top == "sync") {
+                    i--;
+                    std::cout << " -> Sync with input" << std::endl;
                 } else {
+                    i--;
                     std::cout << " -> Error missing input: " << top << "\n";
                 }
+                stack.pop();
             }
         }
 
